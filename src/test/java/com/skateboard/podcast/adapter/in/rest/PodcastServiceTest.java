@@ -1,0 +1,131 @@
+package com.skateboard.podcast.adapter.in.rest;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.skateboard.application.dto.*;
+import com.skateboard.podcast.application.port.in.*;
+
+import com.skateboard.podcast.domain.model.Post;
+import com.skateboard.podcast.domain.model.PostStatus;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+class PodcastServiceTest {
+
+    @Mock
+    private CreatePostUseCase createPostUseCase;
+
+    @Mock
+    private GetPostUseCase getPostUseCase;
+
+    @Mock
+    private GetPostBySlugUseCase getPostBySlugUseCase;
+
+    @Mock
+    private UpdatePostUseCase updatePostUseCase;
+
+    @Mock
+    private DeletePostUseCase deletePostUseCase;
+
+    @Mock
+    private ImportPostsUseCase importPostsUseCase;
+
+    private PodcastService service;
+
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+        service = new PodcastService(createPostUseCase, getPostUseCase, getPostBySlugUseCase,
+                updatePostUseCase, deletePostUseCase, importPostsUseCase, new ObjectMapper());
+    }
+
+    @Test
+    void getPostMapsUseCaseResultToDto() {
+        UUID createdBy = UUID.randomUUID();
+        Post post = Post.create("Episode 1", "episode-1", PostStatus.PUBLISHED,
+                Instant.parse("2026-01-01T00:00:00Z"), "http://cover.png",
+                "[{\"type\":\"text\",\"value\":\"hi\"}]",
+                "[{\"platform\":\"youtube\",\"url\":\"http://yt\"}]", createdBy);
+        when(getPostUseCase.execute(0, 10)).thenReturn(new GetPostUseCase.Result(List.of(post), 42));
+
+        FeedPageResponse response = service.getPost(0, 10);
+
+        assertThat(response.getTotal()).isEqualTo(42);
+        assertThat(response.getPage()).isEqualTo(0);
+        assertThat(response.getSize()).isEqualTo(10);
+        assertThat(response.getPosts()).hasSize(1);
+        PostResponse dto = response.getPosts().get(0);
+        assertThat(dto.getSlug()).isEqualTo("episode-1");
+        assertThat(dto.getStatus()).isEqualTo(PostResponse.StatusEnum.PUBLISHED);
+        assertThat(dto.getPublishAt())
+                .isEqualTo(OffsetDateTime.of(2026, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC));
+        assertThat(dto.getBlocks()).singleElement()
+                .satisfies(block -> assertThat(block).containsEntry("type", "text"));
+        assertThat(dto.getSocialMediaLinks()).singleElement()
+                .satisfies(link -> assertThat(link.getPlatform()).isEqualTo("youtube"));
+        assertThat(dto.getCreatedBy()).isEqualTo(createdBy);
+    }
+
+    @Test
+    void getPostBySlugReturnsNullWhenNotFound() {
+        when(getPostBySlugUseCase.execute("missing")).thenReturn(Optional.empty());
+
+        assertThat(service.getPostBySlug("missing")).isNull();
+    }
+
+    @Test
+    void createPostDefaultsStatusToPublishedAndSlugifiesTitle() {
+        UUID createdBy = UUID.randomUUID();
+        Post post = Post.create("Hello World!", "hello-world", PostStatus.PUBLISHED,
+                null, null, "[]", "[]", createdBy);
+        when(createPostUseCase.execute(any())).thenReturn(post);
+
+        service.createPost(new CreatePostRequest().title("Hello World!"), createdBy);
+
+        ArgumentCaptor<CreatePostUseCase.Input> captor =
+                ArgumentCaptor.forClass(CreatePostUseCase.Input.class);
+        verify(createPostUseCase).execute(captor.capture());
+        assertThat(captor.getValue().slug()).isEqualTo("hello-world");
+        assertThat(captor.getValue().status()).isEqualTo(PostStatus.PUBLISHED);
+        assertThat(captor.getValue().createdBy()).isEqualTo(createdBy);
+    }
+
+    @Test
+    void importPostsMapsItemsAndPassesImportedBy() {
+        UUID importedBy = UUID.randomUUID();
+        when(importPostsUseCase.execute(any()))
+                .thenReturn(new ImportPostsUseCase.Result(2, 1, List.of("'Bad': boom")));
+
+        ImportResult result = service.importPosts(new ImportPostsRequest()
+                .posts(List.of(
+                        new ImportPostItem().title("Ep 1").status(ImportPostItem.StatusEnum.DRAFT),
+                        new ImportPostItem().title("Ep 2"))), importedBy);
+
+        assertThat(result.getImported()).isEqualTo(2);
+        assertThat(result.getFailed()).isEqualTo(1);
+        assertThat(result.getErrors()).containsExactly("'Bad': boom");
+
+        ArgumentCaptor<ImportPostsUseCase.Input> captor =
+                ArgumentCaptor.forClass(ImportPostsUseCase.Input.class);
+        verify(importPostsUseCase).execute(captor.capture());
+        assertThat(captor.getValue().importedBy()).isEqualTo(importedBy);
+        assertThat(captor.getValue().items()).hasSize(2);
+        assertThat(captor.getValue().items().get(0).status()).isEqualTo("draft");
+        // The generated ImportPostItem defaults status to "published" (api.yml default)
+        assertThat(captor.getValue().items().get(1).status()).isEqualTo("published");
+    }
+}

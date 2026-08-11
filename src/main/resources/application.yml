@@ -1,0 +1,45 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: podcast
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/skateboard}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+
+  jpa:
+    # Flyway owns the schema (db/migration); Hibernate only validates its matches.
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        default_schema: skateboard-podcast
+
+  flyway:
+    enabled: true
+    schemas: skateboard-podcast
+    create-schemas: true
+
+  # In-memory cache manager — this standalone service assumes no Redis.
+  cache:
+    type: simple
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Keycloak realm issuer — JWKS is discovered from
+          # {issuer-uri}/.well-known/openid-configuration at startup, so
+          # Keycloak must be reachable when this app boots.
+          issuer-uri: ${APP_SECURITY_OAUTH2_ISSUER_URI:http://localhost:8180/realms/skateboard-podcast}
+
+app:
+  security:
+    oauth2:
+      # Tokens must include this in their "aud" claim (see the FE client's
+      # "audience" protocol mapper in .docker/keycloak/realm-export.json).
+      audience: ${APP_SECURITY_OAUTH2_AUDIENCE:skateboard-podcast-be}

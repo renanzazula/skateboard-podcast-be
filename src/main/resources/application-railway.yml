@@ -1,0 +1,61 @@
+spring:
+  cache:
+    type: redis
+    redis:
+      time-to-live: 24h  # read by CacheConfig
+  data:
+    redis:
+      url: ${REDIS_URL}
+      repositories:
+        enabled: false
+
+  datasource:
+    url: jdbc:postgresql://${PGHOST}:${PGPORT}/${PGDATABASE}
+    username: ${PGUSER}
+    password: ${PGPASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+
+railway:
+  bucket:
+    access-key-id: ${AWS_ACCESS_KEY_ID}
+    secret-access-key: ${AWS_SECRET_ACCESS_KEY}
+    bucket-name: ${AWS_S3_BUCKET_NAME}
+    endpoint: ${AWS_ENDPOINT_URL}
+    region: ${AWS_DEFAULT_REGION:auto}
+    presigned-url-expiration-minutes: ${AVATAR_PRESIGNED_URL_EXPIRATION_MINUTES:60}
+
+app:
+  cors:
+    allowed-origins:
+      - https://skateboard-podcast-fe-app.up.railway.app*
+      - http://localhost:8081
+  security:
+    jwt:
+      secret: ${JWT_SECRET}
+      access-token-expiry: ${JWT_ACCESS_TOKEN_EXPIRY:3600000}
+    keycloak:
+      issuer-uri: ${KEYCLOAK_ISSUER_URI}
+      client-id: ${KEYCLOAK_CLIENT_ID:skateboard-podcast-be}
+      admin:
+        enabled: ${KEYCLOAK_ADMIN_ENABLED:true}
+        client-id: ${KEYCLOAK_ADMIN_CLIENT_ID:skateboard-podcast-be}
+        client-secret: ${KEYCLOAK_ADMIN_CLIENT_SECRET}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: always
+  health:
+    redis:
+      enabled: true
+

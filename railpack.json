@@ -1,0 +1,17 @@
+{
+  "$schema": "https://schema.railpack.com",
+  "provider": "java",
+  "steps": {
+    "build": {
+      "commands": [
+        "chmod +x ./mvnw",
+        "./mvnw clean package -DskipTests",
+        "mkdir -p target",
+        "cp application/target/*.jar target/app.jar"
+      ]
+    }
+  },
+  "deploy": {
+    "startCommand": "java -jar target/app.jar"
+  }
+}

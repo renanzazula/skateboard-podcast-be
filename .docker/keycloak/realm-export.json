@@ -1,0 +1,421 @@
+{
+  "realm": "skateboard-podcast",
+  "displayName": "Skateboard Podcast",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": true,
+  "registrationEmailAsUsername": true,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "rememberMe": true,
+  "bruteForceProtected": true,
+  "passwordPolicy": "length(8)",
+  "loginTheme": "standard-base",
+  "accessTokenLifespan": 900,
+  "ssoSessionIdleTimeout": 2592000,
+  "ssoSessionMaxLifespan": 5184000,
+  "offlineSessionIdleTimeout": 2592000,
+  "smtpServer": {},
+  "roles": {
+    "realm": [
+      {
+        "name": "default-roles-skateboard-podcast",
+        "description": "Realm default role — STANDARD added so self-registered users get the STANDARD user type (and its FUNC_* permissions) automatically. Import skips re-creating this auto-created role but still merges the composites.",
+        "composite": true,
+        "composites": {
+          "realm": [
+            "STANDARD"
+          ]
+        }
+      },
+      {
+        "name": "FUNC_TAB_HOME",
+        "description": "Permission: Home tab"
+      },
+      {
+        "name": "FUNC_TAB_FEED",
+        "description": "Permission: Feed tab"
+      },
+      {
+        "name": "FUNC_TAB_SKATE_SQUARE",
+        "description": "Permission: Skate Square tab"
+      },
+      {
+        "name": "FUNC_TAB_PODCAST",
+        "description": "Permission: Podcast tab"
+      },
+      {
+        "name": "FUNC_TAB_SETTINGS",
+        "description": "Permission: Settings tab"
+      },
+      {
+        "name": "FUNC_TAB_SETTINGS_MANAGE_USERS",
+        "description": "Permission: user management"
+      },
+      {
+        "name": "FUNC_TAB_SETTINGS_MANAGE_USERS_INSERT",
+        "description": "Permission: create users"
+      },
+      {
+        "name": "FUNC_TAB_SETTINGS_MANAGE_USERS_UPDATE",
+        "description": "Permission: update users"
+      },
+      {
+        "name": "FUNC_TAB_SETTINGS_MANAGE_USERS_DELETE",
+        "description": "Permission: delete users"
+      },
+      {
+        "name": "FUNC_TAB_SETTINGS_CONFIGURE_AUTH",
+        "description": "Permission: configure authentication"
+      },
+      {
+        "name": "FUNC_TAB_SETTINGS_SESSION_CONFIG",
+        "description": "Permission: session configuration"
+      },
+      {
+        "name": "FUNC_TAB_SETTINGS_LANGUAGE_SETTINGS",
+        "description": "Permission: language settings"
+      },
+      {
+        "name": "FUNC_TAB_SETTINGS_PROFILE_RESTRICTIONS",
+        "description": "Permission: profile restrictions"
+      },
+      {
+        "name": "FUNC_TAB_SETTINGS_NAVIGATION_MANAGEMENT",
+        "description": "Permission: navigation management"
+      },
+      {
+        "name": "FUNC_TAB_SETTINGS_BRANDING",
+        "description": "Permission: branding"
+      },
+      {
+        "name": "FUNC_FEED_CREATE_POST",
+        "description": "Permission: create feed posts"
+      },
+      {
+        "name": "FUNC_FEED_EDIT_POST",
+        "description": "Permission: edit feed posts"
+      },
+      {
+        "name": "FUNC_FEED_DELETE_POST",
+        "description": "Permission: delete feed posts"
+      },
+      {
+        "name": "FUNC_FEED_CONFIGURE",
+        "description": "Permission: configure feed"
+      },
+      {
+        "name": "FUNC_FEED_IMPORT_JSON",
+        "description": "Permission: import feed posts"
+      },
+      {
+        "name": "FUNC_PODCAST_CREATE_POST",
+        "description": "Permission: create podcast posts"
+      },
+      {
+        "name": "FUNC_PODCAST_EDIT_POST",
+        "description": "Permission: edit podcast posts"
+      },
+      {
+        "name": "FUNC_PODCAST_DELETE_POST",
+        "description": "Permission: delete podcast posts"
+      },
+      {
+        "name": "FUNC_PODCAST_CONFIGURE",
+        "description": "Permission: configure podcast"
+      },
+      {
+        "name": "FUNC_PODCAST_IMPORT_JSON",
+        "description": "Permission: import podcast posts"
+      },
+      {
+        "name": "FUNC_SPLASH_MANAGE",
+        "description": "Permission: manage splash screens"
+      },
+      {
+        "name": "ADMIN",
+        "description": "User type: full access. Composite of every FUNC_* permission.",
+        "composite": true,
+        "composites": {
+          "realm": [
+            "FUNC_TAB_HOME",
+            "FUNC_TAB_FEED",
+            "FUNC_TAB_SKATE_SQUARE",
+            "FUNC_TAB_PODCAST",
+            "FUNC_TAB_SETTINGS",
+            "FUNC_TAB_SETTINGS_MANAGE_USERS",
+            "FUNC_TAB_SETTINGS_MANAGE_USERS_INSERT",
+            "FUNC_TAB_SETTINGS_MANAGE_USERS_UPDATE",
+            "FUNC_TAB_SETTINGS_MANAGE_USERS_DELETE",
+            "FUNC_TAB_SETTINGS_CONFIGURE_AUTH",
+            "FUNC_TAB_SETTINGS_SESSION_CONFIG",
+            "FUNC_TAB_SETTINGS_LANGUAGE_SETTINGS",
+            "FUNC_TAB_SETTINGS_PROFILE_RESTRICTIONS",
+            "FUNC_TAB_SETTINGS_NAVIGATION_MANAGEMENT",
+            "FUNC_TAB_SETTINGS_BRANDING",
+            "FUNC_FEED_CREATE_POST",
+            "FUNC_FEED_EDIT_POST",
+            "FUNC_FEED_DELETE_POST",
+            "FUNC_FEED_CONFIGURE",
+            "FUNC_FEED_IMPORT_JSON",
+            "FUNC_PODCAST_CREATE_POST",
+            "FUNC_PODCAST_EDIT_POST",
+            "FUNC_PODCAST_DELETE_POST",
+            "FUNC_PODCAST_CONFIGURE",
+            "FUNC_PODCAST_IMPORT_JSON",
+            "FUNC_SPLASH_MANAGE"
+          ]
+        }
+      },
+      {
+        "name": "STANDARD",
+        "description": "User type: regular member. Add or remove FUNC_* roles here to change what every STANDARD user can do.",
+        "composite": true,
+        "composites": {
+          "realm": [
+            "FUNC_TAB_SETTINGS"
+          ]
+        }
+      },
+      {
+        "name": "GUEST",
+        "description": "User type: anonymous guest sessions. Never assigned to real Keycloak users \u2014 the backend reads this composite to know what guests may do.",
+        "composite": true,
+        "composites": {
+          "realm": [
+            "FUNC_TAB_HOME",
+            "FUNC_TAB_SETTINGS"
+          ]
+        }
+      }
+    ]
+  },
+  "components": {
+    "org.keycloak.userprofile.UserProfileProvider": [
+      {
+        "providerId": "declarative-user-profile",
+        "subComponents": {},
+        "config": {
+          "kc.user.profile.config": [
+            "{\"attributes\":[{\"name\":\"username\",\"displayName\":\"${username}\",\"validations\":{\"length\":{\"min\":3,\"max\":255},\"username-prohibited-characters\":{},\"up-username-not-idn-homograph\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"email\",\"displayName\":\"${email}\",\"validations\":{\"email\":{},\"length\":{\"max\":255}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"firstName\",\"displayName\":\"${firstName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"lastName\",\"displayName\":\"${lastName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"tenant_id\",\"displayName\":\"Tenant ID\",\"permissions\":{\"view\":[\"admin\"],\"edit\":[\"admin\"]},\"multivalued\":false}],\"groups\":[],\"unmanagedAttributePolicy\":\"ENABLED\"}"
+          ]
+        }
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "skateboard-podcast-fe",
+      "name": "Skateboard Podcast App",
+      "description": "Public OIDC client used by the Expo app (Authorization Code + PKCE). directAccessGrantsEnabled is a dev-only convenience for curl verification \u2014 disable it in production realms.",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "fullScopeAllowed": true,
+      "redirectUris": [
+        "myapp://*",
+        "http://localhost:8081/*",
+        "http://localhost:19006/*",
+        "https://skateboard-podcast-fe-app.up.railway.app/*"
+      ],
+      "webOrigins": [
+        "http://localhost:8081",
+        "http://localhost:19006",
+        "https://skateboard-podcast-fe-app.up.railway.app"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "myapp://*##http://localhost:8081/*##http://localhost:19006/*##https://skateboard-podcast-fe-app.up.railway.app/*"
+      },
+      "protocolMappers": [
+        {
+          "name": "tenant-id",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "tenant_id",
+            "claim.name": "tenant_id",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "skateboard-podcast-be",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        },
+        {
+          "name": "authorities",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "usermodel.realmRoleMapping.rolePrefix": "",
+            "multivalued": "true",
+            "claim.name": "authorities",
+            "jsonType.label": "String",
+            "id.token.claim": "false",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "false"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "skateboard-podcast-be",
+      "name": "Skateboard Podcast Backend",
+      "description": "Confidential service-account client the Spring backend uses for Admin REST API calls (create/disable/delete users). Secret is env-injected in production.",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "dev-backend-secret",
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true
+    }
+  ],
+  "identityProviders": [
+    {
+      "alias": "google",
+      "providerId": "google",
+      "enabled": false,
+      "trustEmail": true,
+      "storeToken": false,
+      "config": {
+        "clientId": "replace-with-google-client-id",
+        "clientSecret": "replace-with-google-client-secret",
+        "useJwksUrl": "true"
+      }
+    }
+  ],
+  "users": [
+    {
+      "id": "00000000-0000-0000-0000-000000000010",
+      "username": "user@example.com",
+      "email": "user@example.com",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Standard User",
+      "attributes": {
+        "tenant_id": [
+          "00000000-0000-0000-0000-000000000001"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "STANDARD"
+      ]
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000020",
+      "username": "admin@example.com",
+      "email": "admin@example.com",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Admin User",
+      "attributes": {
+        "tenant_id": [
+          "00000000-0000-0000-0000-000000000001"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "ADMIN"
+      ]
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000030",
+      "username": "google.user@example.com",
+      "email": "google.user@example.com",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Google User",
+      "attributes": {
+        "tenant_id": [
+          "00000000-0000-0000-0000-000000000001"
+        ]
+      },
+      "federatedIdentities": [
+        {
+          "identityProvider": "google",
+          "userId": "google-mock-provider-id-001",
+          "userName": "google.user@example.com"
+        }
+      ],
+      "realmRoles": [
+        "STANDARD"
+      ]
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000040",
+      "username": "apple.user@example.com",
+      "email": "apple.user@example.com",
+      "emailVerified": true,
+      "enabled": false,
+      "firstName": "Apple User",
+      "attributes": {
+        "tenant_id": [
+          "00000000-0000-0000-0000-000000000001"
+        ]
+      },
+      "realmRoles": [
+        "STANDARD"
+      ]
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000050",
+      "username": "john.doe@example.com",
+      "email": "john.doe@example.com",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "John Doe",
+      "attributes": {
+        "tenant_id": [
+          "00000000-0000-0000-0000-000000000001"
+        ]
+      },
+      "realmRoles": [
+        "STANDARD"
+      ]
+    },
+    {
+      "username": "service-account-skateboard-podcast-be",
+      "enabled": true,
+      "serviceAccountClientId": "skateboard-podcast-be",
+      "clientRoles": {
+        "realm-management": [
+          "manage-users",
+          "view-users",
+          "view-realm"
+        ]
+      }
+    }
+  ]
+}

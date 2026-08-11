@@ -1,0 +1,425 @@
+# Canonical spec for this service — wired into the build.
+#
+# pom.xml's openapi-generator-maven-plugin generates the PostsApi/PodcastApi
+# controller interfaces and all request/response DTOs from this file at build
+# time (into com.standardbase.infrastructure.web.api / com.standardbase.application.dto,
+# matching the package names the original standard-base extraction used, so
+# the hand-written adapter code didn't need to change). Edit this file to
+# change the API — there is no separate upstream spec to sync from.
+
+openapi: "3.0.3"
+info:
+  title: Standard Base API — Posts module
+  version: "1.0.0"
+
+tags:
+  - name: podcast
+    description: Podcast endpoints
+
+paths:
+
+  /api/podcast:
+    get:
+      tags: [podcast]
+      operationId: getPodcastFeed
+      summary: Get published podcast posts (paginated)
+      security:
+        - bearerAuth: []
+      x-required-permissions:
+        - FUNC_TAB_PODCAST
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: size
+          in: query
+          schema: { type: integer, default: 10 }
+      responses:
+        '200':
+          description: Podcast feed page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeedPageResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/podcast/{slug}:
+    get:
+      tags: [podcast]
+      operationId: getPodcastPostBySlug
+      summary: Get a single podcast post by slug
+      security:
+        - bearerAuth: []
+      x-required-permissions:
+        - FUNC_TAB_PODCAST
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Podcast post detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Post not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/admin/podcast:
+    post:
+      tags: [podcast]
+      operationId: createPodcastPost
+      summary: Create a new podcast post (admin only)
+      security:
+        - bearerAuth: []
+      x-required-permissions:
+        - FUNC_PODCAST_CREATE_POST
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePostRequest'
+      responses:
+        '201':
+          description: Podcast post created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostResponse'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden – admin role required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/admin/podcast/{id}:
+    put:
+      tags: [podcast]
+      operationId: updatePodcastPost
+      summary: Update an existing podcast post (admin only)
+      security:
+        - bearerAuth: []
+      x-required-permissions:
+        - FUNC_PODCAST_EDIT_POST
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePostRequest'
+      responses:
+        '200':
+          description: Podcast post updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden – admin role required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Post not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags: [podcast]
+      operationId: deletePodcastPost
+      summary: Delete a podcast post (admin only)
+      security:
+        - bearerAuth: []
+      x-required-permissions:
+        - FUNC_PODCAST_DELETE_POST
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204':
+          description: Podcast post deleted
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden – admin role required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Post not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/admin/podcast/import:
+    post:
+      tags: [podcast]
+      operationId: importPodcastPosts
+      summary: Bulk import podcast posts from JSON (admin only)
+      security:
+        - bearerAuth: []
+      x-required-permissions:
+        - FUNC_PODCAST_IMPORT_JSON
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImportPostsRequest'
+      responses:
+        '200':
+          description: Import result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportResult'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden – admin role required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+
+    SocialMediaLink:
+      type: object
+      required: [url]
+      properties:
+        platform:
+          type: string
+        url:
+          type: string
+
+    PostResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        title:
+          type: string
+        status:
+          type: string
+          enum: [draft, scheduled, published]
+        publishAt:
+          type: string
+          format: date-time
+        coverUrl:
+          type: string
+        blocks:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+          description: Ordered array of typed content blocks
+        socialMediaLinks:
+          type: array
+          items:
+            $ref: '#/components/schemas/SocialMediaLink'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        createdBy:
+          type: string
+          format: uuid
+
+    FeedPageResponse:
+      type: object
+      properties:
+        posts:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostResponse'
+        total:
+          type: integer
+          format: int64
+        page:
+          type: integer
+        size:
+          type: integer
+
+    CreatePostRequest:
+      type: object
+      required: [title, coverUrl]
+      properties:
+        title:
+          type: string
+        coverUrl:
+          type: string
+        status:
+          type: string
+          enum: [draft, scheduled, published]
+          default: published
+        publishAt:
+          type: string
+          format: date-time
+        blocks:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        socialMediaLinks:
+          type: array
+          items:
+            $ref: '#/components/schemas/SocialMediaLink'
+
+    UpdatePostRequest:
+      type: object
+      required: [title, coverUrl]
+      properties:
+        title:
+          type: string
+        coverUrl:
+          type: string
+        status:
+          type: string
+          enum: [draft, scheduled, published]
+        publishAt:
+          type: string
+          format: date-time
+        blocks:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        socialMediaLinks:
+          type: array
+          items:
+            $ref: '#/components/schemas/SocialMediaLink'
+
+    ImportPostsRequest:
+      type: object
+      required: [posts]
+      properties:
+        posts:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/ImportPostItem'
+
+    ImportPostItem:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+        coverUrl:
+          type: string
+        status:
+          type: string
+          enum: [draft, scheduled, published]
+          default: published
+        publishAt:
+          type: string
+          format: date-time
+        blocks:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        socialMediaLinks:
+          type: array
+          items:
+            $ref: '#/components/schemas/SocialMediaLink'
+
+    ImportResult:
+      type: object
+      properties:
+        imported:
+          type: integer
+        failed:
+          type: integer
+        errors:
+          type: array
+          items:
+            type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: integer
+        error:
+          type: string
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
