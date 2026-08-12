@@ -218,6 +218,7 @@
       "serviceAccountsEnabled": false,
       "fullScopeAllowed": true,
       "redirectUris": [
+        "skateboardfe://*",
         "myapp://*",
         "http://localhost:8081/*",
         "http://localhost:19006/*",
@@ -230,7 +231,7 @@
       ],
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "myapp://*##http://localhost:8081/*##http://localhost:19006/*##https://skateboard-podcast-fe-app.up.railway.app/*"
+        "post.logout.redirect.uris": "skateboardfe://*##myapp://*##http://localhost:8081/*##http://localhost:19006/*##https://skateboard-podcast-fe-app.up.railway.app/*"
       },
       "protocolMappers": [
         {
