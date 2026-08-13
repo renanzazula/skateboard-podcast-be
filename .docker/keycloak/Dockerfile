@@ -13,10 +13,12 @@
 #   KC_BOOTSTRAP_ADMIN_USERNAME / KC_BOOTSTRAP_ADMIN_PASSWORD  (first boot only)
 #
 # After first boot, import .docker/keycloak/realm-export.json via the admin
-# console (adjust redirect URIs/secrets per environment, disable
-# directAccessGrantsEnabled on standard-base-app, configure SMTP for the
-# hosted "Forgot password?" flow) and create users manually — either in the
-# console or through the app's admin user management, which syncs to Keycloak.
+# console (adjust redirect URIs/secrets per environment; leave
+# directAccessGrantsEnabled on skateboard-podcast-fe turned on — the FE's
+# in-app login form depends on it, unlike the old hosted-page-only flow;
+# configure SMTP for the hosted "Forgot password?" flow) and create users
+# manually — either in the console or through the app's admin user
+# management, which syncs to Keycloak.
 
 FROM quay.io/keycloak/keycloak:26.1 AS builder
 
@@ -28,8 +30,8 @@ FROM quay.io/keycloak/keycloak:26.1
 
 COPY --from=builder /opt/keycloak/ /opt/keycloak/
 
-# App-branded login theme (realm setting: loginTheme=standard-base)
-COPY .docker/keycloak/themes/standard-base /opt/keycloak/themes/standard-base
+# App-branded login theme (realm setting: loginTheme=skateboard)
+COPY .docker/keycloak/themes/skateboard /opt/keycloak/themes/skateboard
 
 ENTRYPOINT ["/opt/keycloak/bin/kc.sh"]
 CMD ["start", "--optimized"]

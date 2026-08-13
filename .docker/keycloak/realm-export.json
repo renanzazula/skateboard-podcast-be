@@ -11,7 +11,7 @@
   "rememberMe": true,
   "bruteForceProtected": true,
   "passwordPolicy": "length(8)",
-  "loginTheme": "standard-base",
+  "loginTheme": "skateboard",
   "accessTokenLifespan": 900,
   "ssoSessionIdleTimeout": 2592000,
   "ssoSessionMaxLifespan": 5184000,
@@ -208,7 +208,7 @@
     {
       "clientId": "skateboard-podcast-fe",
       "name": "Skateboard Podcast App",
-      "description": "Public OIDC client used by the Expo app (Authorization Code + PKCE). directAccessGrantsEnabled is a dev-only convenience for curl verification \u2014 disable it in production realms.",
+      "description": "Public OIDC client used by the Expo app. directAccessGrantsEnabled backs the app's in-app username/password login form (Resource Owner Password Credentials); standardFlowEnabled/PKCE remain available for any future hosted-page use.",
       "enabled": true,
       "protocol": "openid-connect",
       "publicClient": true,
