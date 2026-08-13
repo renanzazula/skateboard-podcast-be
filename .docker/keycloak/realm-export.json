@@ -30,84 +30,12 @@
         }
       },
       {
-        "name": "FUNC_TAB_HOME",
-        "description": "Permission: Home tab"
-      },
-      {
-        "name": "FUNC_TAB_FEED",
-        "description": "Permission: Feed tab"
-      },
-      {
-        "name": "FUNC_TAB_SKATE_SQUARE",
-        "description": "Permission: Skate Square tab"
-      },
-      {
         "name": "FUNC_TAB_PODCAST",
         "description": "Permission: Podcast tab"
       },
       {
         "name": "FUNC_TAB_SETTINGS",
         "description": "Permission: Settings tab"
-      },
-      {
-        "name": "FUNC_TAB_SETTINGS_MANAGE_USERS",
-        "description": "Permission: user management"
-      },
-      {
-        "name": "FUNC_TAB_SETTINGS_MANAGE_USERS_INSERT",
-        "description": "Permission: create users"
-      },
-      {
-        "name": "FUNC_TAB_SETTINGS_MANAGE_USERS_UPDATE",
-        "description": "Permission: update users"
-      },
-      {
-        "name": "FUNC_TAB_SETTINGS_MANAGE_USERS_DELETE",
-        "description": "Permission: delete users"
-      },
-      {
-        "name": "FUNC_TAB_SETTINGS_CONFIGURE_AUTH",
-        "description": "Permission: configure authentication"
-      },
-      {
-        "name": "FUNC_TAB_SETTINGS_SESSION_CONFIG",
-        "description": "Permission: session configuration"
-      },
-      {
-        "name": "FUNC_TAB_SETTINGS_LANGUAGE_SETTINGS",
-        "description": "Permission: language settings"
-      },
-      {
-        "name": "FUNC_TAB_SETTINGS_PROFILE_RESTRICTIONS",
-        "description": "Permission: profile restrictions"
-      },
-      {
-        "name": "FUNC_TAB_SETTINGS_NAVIGATION_MANAGEMENT",
-        "description": "Permission: navigation management"
-      },
-      {
-        "name": "FUNC_TAB_SETTINGS_BRANDING",
-        "description": "Permission: branding"
-      },
-      {
-        "name": "FUNC_FEED_CREATE_POST",
-        "description": "Permission: create feed posts"
-      },
-      {
-        "name": "FUNC_FEED_EDIT_POST",
-        "description": "Permission: edit feed posts"
-      },
-      {
-        "name": "FUNC_FEED_DELETE_POST",
-        "description": "Permission: delete feed posts"
-      },
-      {
-        "name": "FUNC_FEED_CONFIGURE",
-        "description": "Permission: configure feed"
-      },
-      {
-        "name": "FUNC_FEED_IMPORT_JSON",
-        "description": "Permission: import feed posts"
       },
       {
         "name": "FUNC_PODCAST_CREATE_POST",
@@ -122,16 +50,8 @@
         "description": "Permission: delete podcast posts"
       },
       {
-        "name": "FUNC_PODCAST_CONFIGURE",
-        "description": "Permission: configure podcast"
-      },
-      {
         "name": "FUNC_PODCAST_IMPORT_JSON",
         "description": "Permission: import podcast posts"
-      },
-      {
-        "name": "FUNC_SPLASH_MANAGE",
-        "description": "Permission: manage splash screens"
       },
       {
         "name": "ADMIN",
@@ -139,55 +59,29 @@
         "composite": true,
         "composites": {
           "realm": [
-            "FUNC_TAB_HOME",
-            "FUNC_TAB_FEED",
-            "FUNC_TAB_SKATE_SQUARE",
             "FUNC_TAB_PODCAST",
             "FUNC_TAB_SETTINGS",
-            "FUNC_TAB_SETTINGS_MANAGE_USERS",
-            "FUNC_TAB_SETTINGS_MANAGE_USERS_INSERT",
-            "FUNC_TAB_SETTINGS_MANAGE_USERS_UPDATE",
-            "FUNC_TAB_SETTINGS_MANAGE_USERS_DELETE",
-            "FUNC_TAB_SETTINGS_CONFIGURE_AUTH",
-            "FUNC_TAB_SETTINGS_SESSION_CONFIG",
-            "FUNC_TAB_SETTINGS_LANGUAGE_SETTINGS",
-            "FUNC_TAB_SETTINGS_PROFILE_RESTRICTIONS",
-            "FUNC_TAB_SETTINGS_NAVIGATION_MANAGEMENT",
-            "FUNC_TAB_SETTINGS_BRANDING",
-            "FUNC_FEED_CREATE_POST",
-            "FUNC_FEED_EDIT_POST",
-            "FUNC_FEED_DELETE_POST",
-            "FUNC_FEED_CONFIGURE",
-            "FUNC_FEED_IMPORT_JSON",
             "FUNC_PODCAST_CREATE_POST",
             "FUNC_PODCAST_EDIT_POST",
             "FUNC_PODCAST_DELETE_POST",
-            "FUNC_PODCAST_CONFIGURE",
-            "FUNC_PODCAST_IMPORT_JSON",
-            "FUNC_SPLASH_MANAGE"
+            "FUNC_PODCAST_IMPORT_JSON"
           ]
         }
       },
       {
         "name": "STANDARD",
-        "description": "User type: regular member. Add or remove FUNC_* roles here to change what every STANDARD user can do.",
+        "description": "User type: regular member. Grants FUNC_TAB_PODCAST (read-only) and FUNC_TAB_SETTINGS. Mutations require separate ADMIN-only FUNC_PODCAST_* grants. Add composites here as more STANDARD features ship.",
         "composite": true,
         "composites": {
           "realm": [
+            "FUNC_TAB_PODCAST",
             "FUNC_TAB_SETTINGS"
           ]
         }
       },
       {
         "name": "GUEST",
-        "description": "User type: anonymous guest sessions. Never assigned to real Keycloak users \u2014 the backend reads this composite to know what guests may do.",
-        "composite": true,
-        "composites": {
-          "realm": [
-            "FUNC_TAB_HOME",
-            "FUNC_TAB_SETTINGS"
-          ]
-        }
+        "description": "User type: anonymous guest sessions. Never assigned to real Keycloak users. No FUNC_* permissions today (its prior grants, FUNC_TAB_HOME/FUNC_TAB_SETTINGS, were removed as unused). Add composites here as guest-accessible features ship."
       }
     ]
   },

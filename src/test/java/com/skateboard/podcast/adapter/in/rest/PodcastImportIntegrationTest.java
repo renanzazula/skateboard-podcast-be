@@ -26,7 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * End-to-end import: a real Postgres (Testcontainers) behind the full
  * persistence/Flyway stack, driven through the actual
- * {@code POST /api/admin/podcast/import} endpoint with the sample dataset in
+ * {@code POST /api/podcast/import} endpoint with the sample dataset in
  * skateboard_podcast_import_cleaned.json. Auth is a fake JWT injected via
  * spring-security-test rather than a real Keycloak container — SecurityConfig
  * only fetches JWKS lazily on first real decode (see its javadoc), so no
@@ -54,7 +54,7 @@ class PodcastImportIntegrationTest {
     void importsEveryPostFromTheFixtureFile() throws Exception {
         String importJson = readFixture();
 
-        mockMvc.perform(post("/api/admin/podcast/import")
+        mockMvc.perform(post("/api/podcast/import")
                         .with(jwt()
                                 .jwt(j -> j.subject(UUID.randomUUID().toString()))
                                 .authorities(new SimpleGrantedAuthority("FUNC_PODCAST_IMPORT_JSON")))

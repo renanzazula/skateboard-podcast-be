@@ -9,7 +9,7 @@
 
 openapi: "3.0.3"
 info:
-  title: Standard Base API — Posts module
+  title: Skateboard podcast Api
   version: "1.0.0"
 
 tags:
@@ -47,42 +47,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-
-  /api/podcast/{slug}:
-    get:
-      tags: [podcast]
-      operationId: getPodcastPostBySlug
-      summary: Get a single podcast post by slug
-      security:
-        - bearerAuth: []
-      x-required-permissions:
-        - FUNC_TAB_PODCAST
-      parameters:
-        - name: slug
-          in: path
-          required: true
-          schema: { type: string }
-      responses:
-        '200':
-          description: Podcast post detail
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PostResponse'
-        '401':
-          description: Not authenticated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '404':
-          description: Post not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /api/admin/podcast:
     post:
       tags: [podcast]
       operationId: createPodcastPost
@@ -123,7 +87,41 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /api/admin/podcast/{id}:
+  /api/podcast/{slug}:
+    get:
+      tags: [podcast]
+      operationId: getPodcastPostBySlug
+      summary: Get a single podcast post by slug
+      security:
+        - bearerAuth: []
+      x-required-permissions:
+        - FUNC_TAB_PODCAST
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Podcast post detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Post not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/podcast/{id}:
     put:
       tags: [podcast]
       operationId: updatePodcastPost
@@ -203,7 +201,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /api/admin/podcast/import:
+  /api/podcast/import:
     post:
       tags: [podcast]
       operationId: importPodcastPosts
