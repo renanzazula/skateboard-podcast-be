@@ -2,7 +2,7 @@ spring:
   cache:
     type: redis
     redis:
-      time-to-live: 24h  # read by CacheConfig
+      time-to-live: 24h  # picked up by CacheConfig's RedisCacheManagerBuilderCustomizer
   data:
     redis:
       url: ${REDIS_URL}
