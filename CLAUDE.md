@@ -31,7 +31,7 @@ over the same use cases is straightforward if needed.
   `src/main/resources/db/migration/V1__posts.sql` via Flyway on startup, against the `skateboard-podcast`
   schema (`spring.flyway.schemas`, auto-created via `create-schemas: true`; Hibernate validation is pointed
   at the same schema via `spring.jpa.properties.hibernate.default_schema`) inside the `skateboard` database.
-- Auth is a bearer JWT issued by Keycloak — needs a reachable Keycloak too (`.docker/docker-compose.yaml`,
+- Auth is a bearer JWT issued by Keycloak — needs a reachable Keycloak too (`../skateboard-infrastructure/.docker/docker-compose.yaml`,
   `localhost:8180`, realm `skateboard-podcast`); see "Auth model" below for the issuer/audience config and
   the claims a token needs.
 
@@ -73,7 +73,7 @@ Key conventions:
 ## Auth model
 
 `infrastructure/security/SecurityConfig` is an OAuth2 resource server validating access tokens issued by the
-Keycloak realm in `.docker/keycloak/realm-export.json` (`skateboard-podcast`, run via `.docker/docker-compose.yaml`
+Keycloak realm in `../skateboard-infrastructure/.docker/keycloak/realm-export.json` (`skateboard-podcast`, run via `../skateboard-infrastructure/.docker/docker-compose.yaml`
 on `localhost:8180`). The intended end-to-end flow is: FE authenticates against Keycloak directly (Authorization
 Code + PKCE, `skateboard-podcast-fe` client) and obtains a user JWT, which a separate UI Backend/BFF service
 relays as a Bearer token to this API (token relay — the BFF does not have its own Keycloak client here).
