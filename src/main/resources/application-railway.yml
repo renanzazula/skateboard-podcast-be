@@ -1,61 +1,58 @@
+server:
+  port: 8080
+
 spring:
-  cache:
-    type: redis
-    redis:
-      time-to-live: 24h  # picked up by CacheConfig's RedisCacheManagerBuilderCustomizer
-  data:
-    redis:
-      url: ${REDIS_URL}
-      repositories:
-        enabled: false
+  application:
+    name: podcast
 
   datasource:
-    url: jdbc:postgresql://${PGHOST}:${PGPORT}/${PGDATABASE}
-    username: ${PGUSER}
-    password: ${PGPASSWORD}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/skateboard}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+
   jpa:
+    # Flyway owns the schema (db/migration); Hibernate only validates its matches.
     hibernate:
       ddl-auto: validate
-  servlet:
-    multipart:
-      max-file-size: 5MB
-      max-request-size: 6MB
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        default_schema: skateboard-podcast
 
-railway:
-  bucket:
-    access-key-id: ${AWS_ACCESS_KEY_ID}
-    secret-access-key: ${AWS_SECRET_ACCESS_KEY}
-    bucket-name: ${AWS_S3_BUCKET_NAME}
-    endpoint: ${AWS_ENDPOINT_URL}
-    region: ${AWS_DEFAULT_REGION:auto}
-    presigned-url-expiration-minutes: ${AVATAR_PRESIGNED_URL_EXPIRATION_MINUTES:60}
+  flyway:
+    enabled: true
+    schemas: skateboard-podcast
+    create-schemas: true
+
+  # In-memory cache manager — this standalone service assumes no Redis.
+  cache:
+    type: simple
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Keycloak realm issuer — JWKS is discovered from
+          # {issuer-uri}/.well-known/openid-configuration at startup, so
+          # Keycloak must be reachable when this app boots.
+          issuer-uri: ${APP_SECURITY_OAUTH2_ISSUER_URI:http://localhost:8180/realms/skateboard-podcast}
 
 app:
-  cors:
-    allowed-origins:
-      - https://skateboard-podcast-fe-app.up.railway.app*
-      - http://localhost:8081
   security:
-    jwt:
-      secret: ${JWT_SECRET}
-      access-token-expiry: ${JWT_ACCESS_TOKEN_EXPIRY:3600000}
-    keycloak:
-      issuer-uri: ${KEYCLOAK_ISSUER_URI}
-      client-id: ${KEYCLOAK_CLIENT_ID:skateboard-podcast-be}
-      admin:
-        enabled: ${KEYCLOAK_ADMIN_ENABLED:true}
-        client-id: ${KEYCLOAK_ADMIN_CLIENT_ID:skateboard-podcast-be}
-        client-secret: ${KEYCLOAK_ADMIN_CLIENT_SECRET}
+    oauth2:
+      # Tokens must include this in their "aud" claim (see the FE client's
+      # "audience" protocol mapper in .docker/keycloak/realm-export.json).
+      audience: ${APP_SECURITY_OAUTH2_AUDIENCE:skateboard-podcast-be}
 
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health
-  endpoint:
-    health:
-      show-details: always
-  health:
-    redis:
-      enabled: true
-
+youtube:
+  api:
+    base-url: https://www.googleapis.com/youtube/v3
+    # Never logged, never returned in a response — see YoutubeClient.
+    key: ${YOUTUBE_API_KEY:}
+    connect-timeout-ms: 5000
+    read-timeout-ms: 10000
+  channel-id: ${YOUTUBE_CHANNEL_ID:UCzUpgudHBORsFCJnAO-B7kw}
+  sync:
+    enabled: ${YOUTUBE_SYNC_ENABLED:false}
+    cron: ${YOUTUBE_SYNC_CRON:0 */10 * * * *}
+    initial-import-limit: ${YOUTUBE_SYNC_IMPORT_LIMIT:20}
