@@ -17,11 +17,11 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        default_schema: skateboard-podcast
+        default_schema: skateboard_podcast
 
   flyway:
     enabled: true
-    schemas: skateboard-podcast
+    schemas: skateboard_podcast
     create-schemas: true
 
   cache:

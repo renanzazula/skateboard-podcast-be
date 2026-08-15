@@ -1,5 +1,6 @@
 package com.skateboard.podcast.application.service;
 
+import com.skateboard.podcast.adapter.in.rest.PodcastService;
 import com.skateboard.podcast.application.port.in.CreatePostUseCase;
 import com.skateboard.podcast.application.port.in.SynchronizeYoutubeChannelUseCase;
 import com.skateboard.podcast.application.port.out.LoadPostPort;
@@ -8,6 +9,7 @@ import com.skateboard.podcast.domain.model.PostStatus;
 import com.skateboard.podcast.infrastructure.youtube.YoutubeProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -45,7 +47,12 @@ public class SynchronizeYoutubeChannelService implements SynchronizeYoutubeChann
         this.properties = properties;
     }
 
+    // Bypassing PodcastService (the only other caller of CreatePostUseCase)
+    // means this path would otherwise never evict podcast-post — the feed/
+    // slug cache would keep serving pre-sync results until the 24h TTL
+    // expires. Only evict when something actually changed.
     @Override
+    @CacheEvict(cacheNames = PodcastService.POST_CACHE, allEntries = true, condition = "#result.created() > 0")
     public Result execute() {
         String channelId = properties.getChannelId();
         if (channelId == null || channelId.isBlank()) {
