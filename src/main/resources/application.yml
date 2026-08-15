@@ -44,6 +44,10 @@ app:
       # "audience" protocol mapper in .docker/keycloak/realm-export.json).
       audience: ${APP_SECURITY_OAUTH2_AUDIENCE:skateboard-podcast-be}
 
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%X{correlationId}] [%thread] %logger{36} - %msg%n"
+
 youtube:
   api:
     base-url: https://www.googleapis.com/youtube/v3
