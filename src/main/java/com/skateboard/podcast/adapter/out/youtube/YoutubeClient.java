@@ -70,14 +70,24 @@ public class YoutubeClient implements YoutubeContentPort {
 
     @Override
     public List<YoutubeVideo> getLatestVideos(String uploadsPlaylistId, int limit) {
+        return fetchPlaylistItems(uploadsPlaylistId, limit);
+    }
+
+    @Override
+    public List<YoutubeVideo> getAllPlaylistItems(String playlistId) {
+        return fetchPlaylistItems(playlistId, null);
+    }
+
+    /** {@code limit == null} paginates until every item is fetched (README §9). */
+    private List<YoutubeVideo> fetchPlaylistItems(String playlistId, Integer limit) {
         List<YoutubeVideo> videos = new ArrayList<>();
         String pageToken = null;
         do {
-            int pageSize = Math.min(50, limit - videos.size());
+            int pageSize = limit != null ? Math.min(50, limit - videos.size()) : 50;
             String token = pageToken;
             YoutubePlaylistItemsResponse response = get("/playlistItems", uri -> {
                 uri = uri.queryParam("part", "snippet,contentDetails")
-                        .queryParam("playlistId", uploadsPlaylistId)
+                        .queryParam("playlistId", playlistId)
                         .queryParam("maxResults", pageSize);
                 return token != null ? uri.queryParam("pageToken", token) : uri;
             }, YoutubePlaylistItemsResponse.class);
@@ -91,11 +101,35 @@ public class YoutubeClient implements YoutubeContentPort {
                         item.snippet().description(),
                         parsePublishedAt(item.snippet().publishedAt()),
                         bestThumbnail(item.snippet().thumbnails())));
-                if (videos.size() >= limit) break;
+                if (limit != null && videos.size() >= limit) break;
             }
             pageToken = response.nextPageToken();
-        } while (pageToken != null && videos.size() < limit);
+        } while (pageToken != null && (limit == null || videos.size() < limit));
         return videos;
+    }
+
+    @Override
+    public List<YoutubePlaylist> getPlaylists(String channelId) {
+        List<YoutubePlaylist> playlists = new ArrayList<>();
+        String pageToken = null;
+        do {
+            String token = pageToken;
+            YoutubePlaylistListResponse response = get("/playlists", uri -> {
+                uri = uri.queryParam("part", "snippet")
+                        .queryParam("channelId", channelId)
+                        .queryParam("maxResults", 50);
+                return token != null ? uri.queryParam("pageToken", token) : uri;
+            }, YoutubePlaylistListResponse.class);
+
+            if (response == null || response.items() == null) break;
+            for (YoutubePlaylistListResponse.Item item : response.items()) {
+                if (item.snippet() == null) continue;
+                playlists.add(new YoutubePlaylist(item.id(), item.snippet().title(),
+                        item.snippet().description(), bestThumbnail(item.snippet().thumbnails())));
+            }
+            pageToken = response.nextPageToken();
+        } while (pageToken != null);
+        return playlists;
     }
 
     @Override

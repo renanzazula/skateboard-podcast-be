@@ -242,6 +242,100 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /api/podcast/sync:
+    post:
+      tags: [podcast]
+      operationId: syncPodcastFromYoutube
+      summary: Trigger the same YouTube sync the scheduler runs, on demand (admin only)
+      security:
+        - bearerAuth: []
+      x-required-permissions:
+        - FUNC_PODCAST_IMPORT_JSON
+      responses:
+        '200':
+          description: Sync result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncResultResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden – admin role required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/categories:
+    get:
+      tags: [podcast]
+      operationId: getCategories
+      summary: List enabled categories (mirrors the channel's YouTube playlists)
+      security:
+        - bearerAuth: []
+      x-required-permissions:
+        - FUNC_TAB_PODCAST
+      responses:
+        '200':
+          description: Enabled categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CategoryResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/categories/{slug}/posts:
+    get:
+      tags: [podcast]
+      operationId: getCategoryPosts
+      summary: Get published posts for a category (paginated)
+      security:
+        - bearerAuth: []
+      x-required-permissions:
+        - FUNC_TAB_PODCAST
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string }
+        - name: page
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: size
+          in: query
+          schema: { type: integer, default: 10 }
+      responses:
+        '200':
+          description: Category feed page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeedPageResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Category not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -425,6 +519,41 @@ components:
           type: array
           items:
             type: string
+
+    CategoryResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        name:
+          type: string
+        coverUrl:
+          type: string
+          nullable: true
+        default:
+          type: boolean
+        postCount:
+          type: integer
+          format: int64
+      # Deliberately no source/externalId — the FE must not know YouTube
+      # playlist IDs (README_YOUTUBE_PLAYLIST_CATEGORIES_MIGRATION.md §14).
+
+    SyncResultResponse:
+      type: object
+      properties:
+        received:
+          type: integer
+        created:
+          type: integer
+        existing:
+          type: integer
+        categoryChanges:
+          type: integer
+        success:
+          type: boolean
 
     ErrorResponse:
       type: object

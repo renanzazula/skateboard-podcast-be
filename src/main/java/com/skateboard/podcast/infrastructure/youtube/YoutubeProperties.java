@@ -7,14 +7,18 @@ public class YoutubeProperties {
 
     private Api api = new Api();
     private String channelId;
+    private String defaultPlaylistId;
     private Sync sync = new Sync();
 
-    public Api getApi()               { return api; }
-    public void setApi(Api api)       { this.api = api; }
-    public String getChannelId()      { return channelId; }
-    public void setChannelId(String v){ this.channelId = v; }
-    public Sync getSync()             { return sync; }
-    public void setSync(Sync sync)    { this.sync = sync; }
+    public Api getApi()                     { return api; }
+    public void setApi(Api api)             { this.api = api; }
+    public String getChannelId()            { return channelId; }
+    public void setChannelId(String v)      { this.channelId = v; }
+    /** Playlist ID whose category gets isDefault=true (README §5) — the FE opens on this category. */
+    public String getDefaultPlaylistId()    { return defaultPlaylistId; }
+    public void setDefaultPlaylistId(String v) { this.defaultPlaylistId = v; }
+    public Sync getSync()                   { return sync; }
+    public void setSync(Sync sync)          { this.sync = sync; }
 
     public static class Api {
         private String baseUrl = "https://www.googleapis.com/youtube/v3";

@@ -26,6 +26,7 @@ import java.util.UUID;
 public class PodcastService {
 
     public static final String POST_CACHE = "podcast-post";
+    private static final String DEFAULT_FALLBACK_SLUG = "podcasts";
 
     private final CreatePostUseCase createPostUseCase;
     private final GetPostUseCase getPostUseCase;
@@ -33,6 +34,9 @@ public class PodcastService {
     private final UpdatePostUseCase updatePostUseCase;
     private final DeletePostUseCase deletePostUseCase;
     private final ImportPostsUseCase importPostsUseCase;
+    private final GetCategoriesUseCase getCategoriesUseCase;
+    private final GetPostsByCategoryUseCase getPostsByCategoryUseCase;
+    private final SynchronizeYoutubeChannelUseCase synchronizeYoutubeChannelUseCase;
     private final ObjectMapper objectMapper;
 
     public PodcastService(CreatePostUseCase createPostUseCase,
@@ -41,6 +45,9 @@ public class PodcastService {
                           UpdatePostUseCase updatePostUseCase,
                           DeletePostUseCase deletePostUseCase,
                           ImportPostsUseCase importPostsUseCase,
+                          GetCategoriesUseCase getCategoriesUseCase,
+                          GetPostsByCategoryUseCase getPostsByCategoryUseCase,
+                          SynchronizeYoutubeChannelUseCase synchronizeYoutubeChannelUseCase,
                           ObjectMapper objectMapper) {
         this.createPostUseCase = createPostUseCase;
         this.getPostUseCase = getPostUseCase;
@@ -48,6 +55,9 @@ public class PodcastService {
         this.updatePostUseCase = updatePostUseCase;
         this.deletePostUseCase = deletePostUseCase;
         this.importPostsUseCase = importPostsUseCase;
+        this.getCategoriesUseCase = getCategoriesUseCase;
+        this.getPostsByCategoryUseCase = getPostsByCategoryUseCase;
+        this.synchronizeYoutubeChannelUseCase = synchronizeYoutubeChannelUseCase;
         this.objectMapper = objectMapper;
     }
 
@@ -71,6 +81,25 @@ public class PodcastService {
         return getPostBySlugUseCase.execute(slug)
                 .map(this::toDto)
                 .orElse(null);
+    }
+
+    @Cacheable(cacheNames = POST_CACHE, key = "'categories'")
+    public List<CategoryResponse> getCategories() {
+        List<CategoryResponse> categories = getCategoriesUseCase.execute().categories().stream()
+                .map(this::toCategoryDto)
+                .toList();
+        return applyDefaultFallback(categories);
+    }
+
+    /** @throws com.skateboard.podcast.domain.exception.CategoryNotFoundException mapped to 404 by GlobalExceptionHandler. */
+    @Cacheable(cacheNames = POST_CACHE, key = "'category:' + #slug + ':' + #page + ':' + #size", sync = true)
+    public FeedPageResponse getPostsByCategory(String slug, int page, int size) {
+        GetPostsByCategoryUseCase.Result result = getPostsByCategoryUseCase.execute(slug, page, size);
+        return new FeedPageResponse()
+                .posts(result.posts().stream().map(this::toDto).toList())
+                .total(result.total())
+                .page(page)
+                .size(size);
     }
 
     // ── Mutations (evict both caches; update may change the slug, so
@@ -129,7 +158,49 @@ public class PodcastService {
                 .errors(result.errors());
     }
 
+    // Not annotated with @CacheEvict here: SynchronizeYoutubeChannelService
+    // owns its own eviction of POST_CACHE (conditional on something actually
+    // changing) so the scheduled and manual "sync now" paths behave
+    // identically — see that class's javadoc.
+    public SyncResultResponse triggerSync() {
+        SynchronizeYoutubeChannelUseCase.Result result = synchronizeYoutubeChannelUseCase.execute();
+        return new SyncResultResponse()
+                .received(result.received())
+                .created(result.created())
+                .existing(result.existing())
+                .categoryChanges(result.categoryChanges())
+                .success(result.success());
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
+
+    private CategoryResponse toCategoryDto(GetCategoriesUseCase.CategoryWithCount categoryWithCount) {
+        var category = categoryWithCount.category();
+        return new CategoryResponse()
+                .id(category.getId())
+                .slug(category.getSlug())
+                .name(category.getName())
+                .coverUrl(category.getCoverUrl())
+                ._default(category.isDefault())
+                .postCount(categoryWithCount.postCount());
+    }
+
+    // README §5's fallback: if sync never flagged a category isDefault (e.g.
+    // youtube.default-playlist-id unset), prefer the "podcasts" slug, else
+    // the first category — computed here so the FE doesn't have to.
+    private List<CategoryResponse> applyDefaultFallback(List<CategoryResponse> categories) {
+        if (categories.isEmpty() || categories.stream().anyMatch(c -> Boolean.TRUE.equals(c.getDefault()))) {
+            return categories;
+        }
+        UUID fallbackId = categories.stream()
+                .filter(c -> DEFAULT_FALLBACK_SLUG.equals(c.getSlug()))
+                .findFirst()
+                .orElse(categories.get(0))
+                .getId();
+        return categories.stream()
+                .map(c -> c.getId().equals(fallbackId) ? c._default(true) : c)
+                .toList();
+    }
 
     private PostResponse toDto(Post post) {
         return new PostResponse()

@@ -56,6 +56,9 @@ youtube:
     connect-timeout-ms: 5000
     read-timeout-ms: 10000
   channel-id: ${YOUTUBE_CHANNEL_ID:}
+  # Playlist whose category is flagged isDefault=true — the FE opens on it.
+  # Falls back to the "podcasts" slug, then the first enabled category, if unset.
+  default-playlist-id: ${YOUTUBE_DEFAULT_PLAYLIST_ID:}
   sync:
     enabled: ${YOUTUBE_SYNC_ENABLED:false}
     cron: ${YOUTUBE_SYNC_CRON:0 */10 * * * *}

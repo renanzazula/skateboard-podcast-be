@@ -16,6 +16,8 @@ public interface YoutubeContentPort {
 
     record YoutubeVideoDuration(String videoId, Integer durationSeconds) {}
 
+    record YoutubePlaylist(String playlistId, String title, String description, String thumbnailUrl) {}
+
     /** @throws YoutubeSyncException if the channel can't be resolved (not found, invalid key, transport failure). */
     YoutubeChannel resolveChannel(String channelId);
 
@@ -24,6 +26,12 @@ public interface YoutubeContentPort {
 
     /** Batched duration lookup (YouTube allows up to 50 ids per call); implementations handle chunking. */
     List<YoutubeVideoDuration> getVideoDurations(List<String> videoIds);
+
+    /** All public playlists for the channel, fully paginated. */
+    List<YoutubePlaylist> getPlaylists(String channelId);
+
+    /** Every item in the playlist, fully paginated — unlike {@link #getLatestVideos}, no cap. */
+    List<YoutubeVideo> getAllPlaylistItems(String playlistId);
 
     class YoutubeSyncException extends RuntimeException {
         public YoutubeSyncException(String message, Throwable cause) {

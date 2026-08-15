@@ -25,6 +25,7 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 /**
@@ -56,12 +57,21 @@ class PodcastServiceCachingTest {
         @Bean DeletePostUseCase deletePostUseCase() { return mock(DeletePostUseCase.class); }
         @Bean
         ImportPostsUseCase importPostsUseCase() { return mock(ImportPostsUseCase.class); }
+        @Bean
+        GetCategoriesUseCase getCategoriesUseCase() { return mock(GetCategoriesUseCase.class); }
+        @Bean
+        GetPostsByCategoryUseCase getPostsByCategoryUseCase() { return mock(GetPostsByCategoryUseCase.class); }
+        @Bean
+        SynchronizeYoutubeChannelUseCase synchronizeYoutubeChannelUseCase() { return mock(SynchronizeYoutubeChannelUseCase.class); }
 
         @Bean
         PodcastService podcastService(CreatePostUseCase create, GetPostUseCase feed,
                                       GetPostBySlugUseCase bySlug, UpdatePostUseCase update,
-                                      DeletePostUseCase delete, ImportPostsUseCase importPosts) {
-            return new PodcastService(create, feed, bySlug, update, delete, importPosts, new ObjectMapper());
+                                      DeletePostUseCase delete, ImportPostsUseCase importPosts,
+                                      GetCategoriesUseCase categories, GetPostsByCategoryUseCase postsByCategory,
+                                      SynchronizeYoutubeChannelUseCase sync) {
+            return new PodcastService(create, feed, bySlug, update, delete, importPosts,
+                    categories, postsByCategory, sync, new ObjectMapper());
         }
     }
 
@@ -72,11 +82,13 @@ class PodcastServiceCachingTest {
     @Autowired private GetPostBySlugUseCase getPostBySlugUseCase;
     @Autowired private DeletePostUseCase deletePostUseCase;
     @Autowired private ImportPostsUseCase importPostsUseCase;
+    @Autowired private GetCategoriesUseCase getCategoriesUseCase;
+    @Autowired private GetPostsByCategoryUseCase getPostsByCategoryUseCase;
 
     @BeforeEach
     void setUp() {
         reset(createPostUseCase, getPostUseCase, getPostBySlugUseCase,
-                deletePostUseCase, importPostsUseCase);
+                deletePostUseCase, importPostsUseCase, getCategoriesUseCase, getPostsByCategoryUseCase);
         cacheManager.getCache(PodcastService.POST_CACHE).clear();
         when(getPostUseCase.execute(anyInt(), anyInt()))
                 .thenReturn(new GetPostUseCase.Result(List.of(), 0));
@@ -110,6 +122,29 @@ class PodcastServiceCachingTest {
         service.getPostBySlug("missing");
 
         verify(getPostBySlugUseCase, times(2)).execute("missing");
+    }
+
+    @Test
+    void categoriesAreCached() {
+        when(getCategoriesUseCase.execute()).thenReturn(new GetCategoriesUseCase.Result(List.of()));
+
+        service.getCategories();
+        service.getCategories();
+
+        verify(getCategoriesUseCase, times(1)).execute();
+    }
+
+    @Test
+    void categoryPostsAreCachedPerSlugPageAndSize() {
+        when(getPostsByCategoryUseCase.execute(anyString(), anyInt(), anyInt()))
+                .thenReturn(new GetPostsByCategoryUseCase.Result(List.of(), 0));
+
+        service.getPostsByCategory("podcasts", 0, 10);
+        service.getPostsByCategory("podcasts", 0, 10);
+        verify(getPostsByCategoryUseCase, times(1)).execute("podcasts", 0, 10);
+
+        service.getPostsByCategory("events", 0, 10);
+        verify(getPostsByCategoryUseCase, times(1)).execute("events", 0, 10);
     }
 
     @Test

@@ -10,6 +10,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -64,6 +65,26 @@ public class PodcastController implements PodcastApi {
     @PreAuthorize("hasAuthority('FUNC_PODCAST_IMPORT_JSON')")
     public ResponseEntity<ImportResult> importPodcastPosts(ImportPostsRequest req) {
         return ResponseEntity.ok(podcastService.importPosts(req, resolveCurrentUserId()));
+    }
+
+    @Override
+    @PreAuthorize("hasAuthority('FUNC_PODCAST_IMPORT_JSON')")
+    public ResponseEntity<SyncResultResponse> syncPodcastFromYoutube() {
+        return ResponseEntity.ok(podcastService.triggerSync());
+    }
+
+    @Override
+    @PreAuthorize("hasAuthority('FUNC_TAB_PODCAST')")
+    public ResponseEntity<List<CategoryResponse>> getCategories() {
+        return ResponseEntity.ok(podcastService.getCategories());
+    }
+
+    @Override
+    @PreAuthorize("hasAuthority('FUNC_TAB_PODCAST')")
+    public ResponseEntity<FeedPageResponse> getCategoryPosts(String slug, Integer page, Integer size) {
+        int p = page != null ? page : 0;
+        int s = size != null ? Math.min(size, 50) : 10;
+        return ResponseEntity.ok(podcastService.getPostsByCategory(slug, p, s));
     }
 
     private UUID resolveCurrentUserId() {

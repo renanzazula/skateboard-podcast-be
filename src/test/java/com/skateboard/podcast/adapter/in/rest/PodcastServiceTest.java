@@ -44,13 +44,23 @@ class PodcastServiceTest {
     @Mock
     private ImportPostsUseCase importPostsUseCase;
 
+    @Mock
+    private GetCategoriesUseCase getCategoriesUseCase;
+
+    @Mock
+    private GetPostsByCategoryUseCase getPostsByCategoryUseCase;
+
+    @Mock
+    private SynchronizeYoutubeChannelUseCase synchronizeYoutubeChannelUseCase;
+
     private PodcastService service;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
         service = new PodcastService(createPostUseCase, getPostUseCase, getPostBySlugUseCase,
-                updatePostUseCase, deletePostUseCase, importPostsUseCase, new ObjectMapper());
+                updatePostUseCase, deletePostUseCase, importPostsUseCase, getCategoriesUseCase,
+                getPostsByCategoryUseCase, synchronizeYoutubeChannelUseCase, new ObjectMapper());
     }
 
     @Test
@@ -158,5 +168,67 @@ class PodcastServiceTest {
         assertThat(captor.getValue().items().get(0).status()).isEqualTo("draft");
         // The generated ImportPostItem defaults status to "published" (api.yml default)
         assertThat(captor.getValue().items().get(1).status()).isEqualTo("published");
+    }
+
+    @Test
+    void getCategoriesUsesStoredDefaultWhenPresent() {
+        var podcasts = com.skateboard.podcast.domain.model.Category.createFromYoutube(
+                "podcasts", "PL1", "Podcasts", null, null, true);
+        var events = com.skateboard.podcast.domain.model.Category.createFromYoutube(
+                "events", "PL2", "Events", null, null, false);
+        when(getCategoriesUseCase.execute()).thenReturn(new GetCategoriesUseCase.Result(List.of(
+                new GetCategoriesUseCase.CategoryWithCount(podcasts, 5),
+                new GetCategoriesUseCase.CategoryWithCount(events, 2))));
+
+        List<CategoryResponse> result = service.getCategories();
+
+        assertThat(result).filteredOn(c -> c.getSlug().equals("podcasts")).singleElement()
+                .satisfies(c -> assertThat(c.getDefault()).isTrue());
+        assertThat(result).filteredOn(c -> c.getSlug().equals("events")).singleElement()
+                .satisfies(c -> assertThat(c.getDefault()).isFalse());
+    }
+
+    @Test
+    void getCategoriesFallsBackToPodcastsSlugWhenNoneIsFlaggedDefault() {
+        var podcasts = com.skateboard.podcast.domain.model.Category.createFromYoutube(
+                "podcasts", "PL1", "Podcasts", null, null, false);
+        var events = com.skateboard.podcast.domain.model.Category.createFromYoutube(
+                "events", "PL2", "Events", null, null, false);
+        when(getCategoriesUseCase.execute()).thenReturn(new GetCategoriesUseCase.Result(List.of(
+                new GetCategoriesUseCase.CategoryWithCount(events, 2),
+                new GetCategoriesUseCase.CategoryWithCount(podcasts, 5))));
+
+        List<CategoryResponse> result = service.getCategories();
+
+        assertThat(result).filteredOn(c -> c.getSlug().equals("podcasts")).singleElement()
+                .satisfies(c -> assertThat(c.getDefault()).isTrue());
+        assertThat(result).filteredOn(c -> c.getSlug().equals("events")).singleElement()
+                .satisfies(c -> assertThat(c.getDefault()).isFalse());
+    }
+
+    @Test
+    void getPostsByCategoryMapsResultToFeedPage() {
+        Post post = Post.create("Ep", "ep", PostStatus.PUBLISHED, null, null, "[]", "[]", null);
+        when(getPostsByCategoryUseCase.execute("podcasts", 0, 10))
+                .thenReturn(new GetPostsByCategoryUseCase.Result(List.of(post), 1));
+
+        FeedPageResponse response = service.getPostsByCategory("podcasts", 0, 10);
+
+        assertThat(response.getTotal()).isEqualTo(1);
+        assertThat(response.getPosts()).hasSize(1);
+    }
+
+    @Test
+    void triggerSyncMapsUseCaseResult() {
+        when(synchronizeYoutubeChannelUseCase.execute())
+                .thenReturn(new SynchronizeYoutubeChannelUseCase.Result(5, 2, 3, 1, true));
+
+        SyncResultResponse response = service.triggerSync();
+
+        assertThat(response.getReceived()).isEqualTo(5);
+        assertThat(response.getCreated()).isEqualTo(2);
+        assertThat(response.getExisting()).isEqualTo(3);
+        assertThat(response.getCategoryChanges()).isEqualTo(1);
+        assertThat(response.getSuccess()).isTrue();
     }
 }

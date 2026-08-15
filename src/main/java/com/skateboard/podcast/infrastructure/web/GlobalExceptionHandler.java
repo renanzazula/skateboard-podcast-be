@@ -1,6 +1,7 @@
 package com.skateboard.podcast.infrastructure.web;
 
 import com.skateboard.application.dto.ErrorResponse;
+import com.skateboard.podcast.domain.exception.CategoryNotFoundException;
 import com.skateboard.podcast.domain.exception.PostNotFoundException;
 
 import org.slf4j.Logger;
@@ -29,6 +30,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(PostNotFoundException.class)
     public ResponseEntity<ErrorResponse> handlePostNotFound(PostNotFoundException ex) {
+        return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage());
+    }
+
+    @ExceptionHandler(CategoryNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleCategoryNotFound(CategoryNotFoundException ex) {
         return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 

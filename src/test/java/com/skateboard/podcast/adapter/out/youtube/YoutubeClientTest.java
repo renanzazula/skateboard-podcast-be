@@ -96,6 +96,50 @@ class YoutubeClientTest {
     }
 
     @Test
+    void getAllPlaylistItemsPaginatesWithNoCap() {
+        server.enqueue(new MockResponse().setBody("""
+                {"items":[
+                  {"snippet":{"title":"Ep 1","description":"d1","publishedAt":"2026-01-01T00:00:00Z","thumbnails":{}},
+                   "contentDetails":{"videoId":"v1"}}
+                ],"nextPageToken":"page2"}
+                """).addHeader("Content-Type", "application/json"));
+        server.enqueue(new MockResponse().setBody("""
+                {"items":[
+                  {"snippet":{"title":"Ep 2","description":"d2","publishedAt":"2026-01-02T00:00:00Z","thumbnails":{}},
+                   "contentDetails":{"videoId":"v2"}}
+                ]}
+                """).addHeader("Content-Type", "application/json"));
+
+        List<YoutubeContentPort.YoutubeVideo> videos = client.getAllPlaylistItems("PL1");
+
+        assertThat(videos).extracting(YoutubeContentPort.YoutubeVideo::videoId).containsExactly("v1", "v2");
+    }
+
+    @Test
+    void getPlaylistsParsesSnippetAndPaginates() {
+        server.enqueue(new MockResponse().setBody("""
+                {"items":[
+                  {"id":"PL1","snippet":{"title":"Podcasts","description":"d",
+                    "thumbnails":{"high":{"url":"http://t1"}}}}
+                ],"nextPageToken":"page2"}
+                """).addHeader("Content-Type", "application/json"));
+        server.enqueue(new MockResponse().setBody("""
+                {"items":[
+                  {"id":"PL2","snippet":{"title":"Events","description":null,"thumbnails":{}}}
+                ]}
+                """).addHeader("Content-Type", "application/json"));
+
+        List<YoutubeContentPort.YoutubePlaylist> playlists = client.getPlaylists("UC1");
+
+        assertThat(playlists).hasSize(2);
+        assertThat(playlists.get(0).playlistId()).isEqualTo("PL1");
+        assertThat(playlists.get(0).title()).isEqualTo("Podcasts");
+        assertThat(playlists.get(0).thumbnailUrl()).isEqualTo("http://t1");
+        assertThat(playlists.get(1).playlistId()).isEqualTo("PL2");
+        assertThat(playlists.get(1).thumbnailUrl()).isNull();
+    }
+
+    @Test
     void getVideoDurationsParsesIso8601Duration() {
         server.enqueue(new MockResponse().setBody("""
                 {"items":[{"id":"v1","contentDetails":{"duration":"PT1H2M3S"}}]}

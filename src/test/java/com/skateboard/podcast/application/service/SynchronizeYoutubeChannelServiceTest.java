@@ -2,8 +2,11 @@ package com.skateboard.podcast.application.service;
 
 import com.skateboard.podcast.application.port.in.CreatePostUseCase;
 import com.skateboard.podcast.application.port.in.SynchronizeYoutubeChannelUseCase;
+import com.skateboard.podcast.application.port.out.CategoryRepositoryPort;
 import com.skateboard.podcast.application.port.out.LoadPostPort;
+import com.skateboard.podcast.application.port.out.PostCategoryPort;
 import com.skateboard.podcast.application.port.out.YoutubeContentPort;
+import com.skateboard.podcast.domain.model.Category;
 import com.skateboard.podcast.domain.model.Post;
 import com.skateboard.podcast.domain.model.PostStatus;
 import com.skateboard.podcast.infrastructure.youtube.YoutubeProperties;
@@ -16,10 +19,13 @@ import org.mockito.MockitoAnnotations;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -27,14 +33,11 @@ import static org.mockito.Mockito.when;
 
 class SynchronizeYoutubeChannelServiceTest {
 
-    @Mock
-    private YoutubeContentPort youtubeContentPort;
-
-    @Mock
-    private LoadPostPort loadPostPort;
-
-    @Mock
-    private CreatePostUseCase createPostUseCase;
+    @Mock private YoutubeContentPort youtubeContentPort;
+    @Mock private LoadPostPort loadPostPort;
+    @Mock private CreatePostUseCase createPostUseCase;
+    @Mock private CategoryRepositoryPort categoryRepositoryPort;
+    @Mock private PostCategoryPort postCategoryPort;
 
     private YoutubeProperties properties;
     private SynchronizeYoutubeChannelService service;
@@ -45,11 +48,25 @@ class SynchronizeYoutubeChannelServiceTest {
         properties = new YoutubeProperties();
         properties.setChannelId("UC_TEST_CHANNEL");
         properties.getSync().setInitialImportLimit(20);
-        service = new SynchronizeYoutubeChannelService(youtubeContentPort, loadPostPort, createPostUseCase, properties);
+        service = new SynchronizeYoutubeChannelService(youtubeContentPort, loadPostPort, createPostUseCase,
+                categoryRepositoryPort, postCategoryPort, properties);
+
+        // Defaults so tests that only care about the uploads catch-all (or
+        // only about playlists) don't have to stub the other side.
+        when(youtubeContentPort.getPlaylists(anyString())).thenReturn(List.of());
+        when(youtubeContentPort.getLatestVideos(anyString(), anyInt())).thenReturn(List.of());
+        when(categoryRepositoryPort.findAll()).thenReturn(List.of());
+        when(categoryRepositoryPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(categoryRepositoryPort.findBySlug(anyString())).thenReturn(Optional.empty());
+        when(postCategoryPort.findVideoIdsByCategory(any())).thenReturn(Set.of());
     }
 
     private YoutubeContentPort.YoutubeVideo video(String id, String title) {
         return new YoutubeContentPort.YoutubeVideo(id, title, "desc " + id, Instant.parse("2026-01-01T00:00:00Z"), "http://thumb/" + id);
+    }
+
+    private YoutubeContentPort.YoutubePlaylist playlist(String id, String title) {
+        return new YoutubeContentPort.YoutubePlaylist(id, title, "playlist desc " + id, "http://thumb/playlist/" + id);
     }
 
     private void stubChannelResolution() {
@@ -64,6 +81,8 @@ class SynchronizeYoutubeChannelServiceTest {
     private Post somePost() {
         return Post.create("Some Post", "some-post", PostStatus.PUBLISHED, null, null, "[]", "[]", null);
     }
+
+    // ── Uploads catch-all (pre-existing behavior) ───────────────────────────
 
     @Test
     void newVideoIsPersisted() {
@@ -156,5 +175,143 @@ class SynchronizeYoutubeChannelServiceTest {
 
         assertThat(result.created()).isEqualTo(1);
         verify(createPostUseCase, times(2)).execute(any());
+    }
+
+    // ── Playlists -> categories ──────────────────────────────────────────────
+
+    @Test
+    void newPlaylistCreatesCategory() {
+        stubChannelResolution();
+        when(youtubeContentPort.getPlaylists("UC_TEST_CHANNEL")).thenReturn(List.of(playlist("PL1", "Podcasts")));
+        when(categoryRepositoryPort.findByExternalId("YOUTUBE", "PL1")).thenReturn(Optional.empty());
+        when(youtubeContentPort.getAllPlaylistItems("PL1")).thenReturn(List.of());
+
+        service.execute();
+
+        ArgumentCaptor<Category> captor = ArgumentCaptor.forClass(Category.class);
+        verify(categoryRepositoryPort).save(captor.capture());
+        Category saved = captor.getValue();
+        assertThat(saved.getExternalId()).isEqualTo("PL1");
+        assertThat(saved.getSlug()).isEqualTo("podcasts");
+        assertThat(saved.getName()).isEqualTo("Podcasts");
+        assertThat(saved.isEnabled()).isTrue();
+    }
+
+    @Test
+    void existingPlaylistUpdatesCategoryWithoutDuplicating() {
+        stubChannelResolution();
+        when(youtubeContentPort.getPlaylists("UC_TEST_CHANNEL")).thenReturn(List.of(playlist("PL1", "Podcasts Renamed")));
+        Category existing = Category.createFromYoutube("podcasts", "PL1", "Podcasts", "old desc", "old-cover", false);
+        when(categoryRepositoryPort.findByExternalId("YOUTUBE", "PL1")).thenReturn(Optional.of(existing));
+        when(youtubeContentPort.getAllPlaylistItems("PL1")).thenReturn(List.of());
+
+        service.execute();
+
+        ArgumentCaptor<Category> captor = ArgumentCaptor.forClass(Category.class);
+        verify(categoryRepositoryPort).save(captor.capture());
+        Category saved = captor.getValue();
+        assertThat(saved.getId()).isEqualTo(existing.getId());
+        assertThat(saved.getSlug()).isEqualTo("podcasts"); // slug stays stable across a rename
+        assertThat(saved.getName()).isEqualTo("Podcasts Renamed");
+        verify(categoryRepositoryPort, never()).findBySlug(anyString());
+    }
+
+    @Test
+    void defaultPlaylistMarksCategoryAsDefault() {
+        properties.setDefaultPlaylistId("PL1");
+        stubChannelResolution();
+        when(youtubeContentPort.getPlaylists("UC_TEST_CHANNEL"))
+                .thenReturn(List.of(playlist("PL1", "Podcasts"), playlist("PL2", "Events")));
+        when(categoryRepositoryPort.findByExternalId(anyString(), anyString())).thenReturn(Optional.empty());
+        when(youtubeContentPort.getAllPlaylistItems(anyString())).thenReturn(List.of());
+
+        service.execute();
+
+        ArgumentCaptor<Category> captor = ArgumentCaptor.forClass(Category.class);
+        verify(categoryRepositoryPort, times(2)).save(captor.capture());
+        assertThat(captor.getAllValues())
+                .filteredOn(c -> c.getExternalId().equals("PL1")).singleElement()
+                .satisfies(c -> assertThat(c.isDefault()).isTrue());
+        assertThat(captor.getAllValues())
+                .filteredOn(c -> c.getExternalId().equals("PL2")).singleElement()
+                .satisfies(c -> assertThat(c.isDefault()).isFalse());
+    }
+
+    @Test
+    void missingPlaylistDisablesCategory() {
+        stubChannelResolution();
+        when(youtubeContentPort.getPlaylists("UC_TEST_CHANNEL")).thenReturn(List.of());
+        Category stale = Category.createFromYoutube("events", "PL_GONE", "Events", null, null, false);
+        when(categoryRepositoryPort.findAll()).thenReturn(List.of(stale));
+
+        service.execute();
+
+        ArgumentCaptor<Category> captor = ArgumentCaptor.forClass(Category.class);
+        verify(categoryRepositoryPort).save(captor.capture());
+        assertThat(captor.getValue().isEnabled()).isFalse();
+    }
+
+    @Test
+    void videoInTwoPlaylistsGetsTwoAssociations() {
+        stubChannelResolution();
+        when(youtubeContentPort.getPlaylists("UC_TEST_CHANNEL"))
+                .thenReturn(List.of(playlist("PL1", "Podcasts"), playlist("PL2", "Events")));
+        when(categoryRepositoryPort.findByExternalId(anyString(), anyString())).thenReturn(Optional.empty());
+        when(youtubeContentPort.getAllPlaylistItems(anyString())).thenReturn(List.of(video("v1", "Ep #1")));
+        Post created = somePost();
+        // First playlist: not found yet, gets created. Second playlist: now found, reused.
+        when(loadPostPort.findByYoutubeVideoId("v1")).thenReturn(Optional.empty(), Optional.of(created));
+        when(createPostUseCase.execute(any())).thenReturn(created);
+
+        service.execute();
+
+        verify(createPostUseCase, times(1)).execute(any());
+        verify(postCategoryPort, times(2)).addAssociation(any(), any());
+    }
+
+    @Test
+    void videoRemovedFromPlaylistRemovesOnlyThatAssociationAndKeepsPost() {
+        stubChannelResolution();
+        when(youtubeContentPort.getPlaylists("UC_TEST_CHANNEL")).thenReturn(List.of(playlist("PL1", "Podcasts")));
+        Category category = Category.createFromYoutube("podcasts", "PL1", "Podcasts", null, null, false);
+        when(categoryRepositoryPort.findByExternalId("YOUTUBE", "PL1")).thenReturn(Optional.of(category));
+        when(youtubeContentPort.getAllPlaylistItems("PL1")).thenReturn(List.of()); // video no longer in the playlist
+        when(postCategoryPort.findVideoIdsByCategory(category.getId())).thenReturn(Set.of("v1"));
+        Post existingPost = somePost();
+        when(loadPostPort.findByYoutubeVideoId("v1")).thenReturn(Optional.of(existingPost));
+
+        service.execute();
+
+        verify(postCategoryPort).removeAssociation(existingPost.getId(), category.getId());
+        verifyNoInteractions(createPostUseCase); // the post itself is never deleted/recreated
+    }
+
+    @Test
+    void runningSyncTwiceDoesNotDuplicateCategoriesOrAssociations() {
+        stubChannelResolution();
+        when(youtubeContentPort.getPlaylists("UC_TEST_CHANNEL")).thenReturn(List.of(playlist("PL1", "Podcasts")));
+        when(youtubeContentPort.getAllPlaylistItems("PL1")).thenReturn(List.of(video("v1", "Ep #1")));
+
+        // First run: playlist and video are new.
+        when(categoryRepositoryPort.findByExternalId("YOUTUBE", "PL1")).thenReturn(Optional.empty());
+        Category savedCategory = Category.createFromYoutube("podcasts", "PL1", "Podcasts", "d", "c", false);
+        when(categoryRepositoryPort.save(any())).thenReturn(savedCategory);
+        when(loadPostPort.findByYoutubeVideoId("v1")).thenReturn(Optional.empty());
+        Post createdPost = somePost();
+        when(createPostUseCase.execute(any())).thenReturn(createdPost);
+
+        service.execute();
+        verify(createPostUseCase, times(1)).execute(any());
+        verify(postCategoryPort, times(1)).addAssociation(createdPost.getId(), savedCategory.getId());
+
+        // Second run: everything already exists — idempotent, no new creation/association.
+        when(categoryRepositoryPort.findByExternalId("YOUTUBE", "PL1")).thenReturn(Optional.of(savedCategory));
+        when(loadPostPort.findByYoutubeVideoId("v1")).thenReturn(Optional.of(createdPost));
+        when(postCategoryPort.findVideoIdsByCategory(savedCategory.getId())).thenReturn(Set.of("v1"));
+
+        service.execute();
+
+        verify(createPostUseCase, times(1)).execute(any()); // still just the one call from run 1
+        verify(postCategoryPort, times(1)).addAssociation(any(), any()); // still just the one call from run 1
     }
 }
