@@ -143,7 +143,13 @@ public class PodcastService {
                 .socialMediaLinks(parseSocialLinks(post.getSocialMediaLinksJson()))
                 .createdAt(post.getCreatedAt().atOffset(ZoneOffset.UTC))
                 .updatedAt(post.getUpdatedAt().atOffset(ZoneOffset.UTC))
-                .createdBy(post.getCreatedBy());
+                .createdBy(post.getCreatedBy())
+                .youtubeVideoId(post.getYoutubeVideoId())
+                .youtubeUrl(post.getYoutubeVideoId() != null
+                        ? "https://www.youtube.com/watch?v=" + post.getYoutubeVideoId() : null)
+                .description(post.getDescription())
+                .durationSeconds(post.getDurationSeconds())
+                .episodeNumber(post.getEpisodeNumber());
     }
 
     private String blocksToJson(List<Map<String, Object>> blocks) {

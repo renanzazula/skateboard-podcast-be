@@ -39,6 +39,11 @@ public class PostPersistenceAdapter implements LoadPostPort, SavePostPort {
     }
 
     @Override
+    public Optional<Post> findByYoutubeVideoId(String youtubeVideoId) {
+        return jpaRepository.findByYoutubeVideoId(youtubeVideoId).map(this::toDomain);
+    }
+
+    @Override
     public List<Post> findPublished(int page, int size) {
         // Ordering (COALESCE of publishAt/createdAt DESC) lives in the @Query,
         // so episodes sort by their real publish date, not import time.
@@ -79,7 +84,8 @@ public class PostPersistenceAdapter implements LoadPostPort, SavePostPort {
                 PostStatus.valueOf(e.getStatus()),
                 e.getPublishAt(), e.getCoverUrl(), e.getBlocksJson(),
                 e.getSocialMediaLinksJson(),
-                e.getCreatedAt(), e.getUpdatedAt(), e.getCreatedBy()
+                e.getCreatedAt(), e.getUpdatedAt(), e.getCreatedBy(),
+                e.getYoutubeVideoId(), e.getDescription(), e.getDurationSeconds(), e.getEpisodeNumber()
         );
     }
 
@@ -96,6 +102,10 @@ public class PostPersistenceAdapter implements LoadPostPort, SavePostPort {
         e.setCreatedAt(post.getCreatedAt());
         e.setUpdatedAt(post.getUpdatedAt());
         e.setCreatedBy(post.getCreatedBy());
+        e.setYoutubeVideoId(post.getYoutubeVideoId());
+        e.setDescription(post.getDescription());
+        e.setDurationSeconds(post.getDurationSeconds());
+        e.setEpisodeNumber(post.getEpisodeNumber());
         return e;
     }
 }

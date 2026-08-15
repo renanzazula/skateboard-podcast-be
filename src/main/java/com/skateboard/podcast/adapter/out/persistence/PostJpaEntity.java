@@ -45,6 +45,18 @@ public class PostJpaEntity {
     @Column
     private UUID createdBy;
 
+    @Column(name = "youtube_video_id", length = 20, unique = true)
+    private String youtubeVideoId;
+
+    @Column(columnDefinition = "text")
+    private String description;
+
+    @Column(name = "duration_seconds")
+    private Integer durationSeconds;
+
+    @Column(name = "episode_number")
+    private Integer episodeNumber;
+
     public PostJpaEntity() {}
 
     public UUID getId()          { return id; }
@@ -58,6 +70,10 @@ public class PostJpaEntity {
     public Instant getCreatedAt()           { return createdAt; }
     public Instant getUpdatedAt(){ return updatedAt; }
     public UUID getCreatedBy()   { return createdBy; }
+    public String getYoutubeVideoId()  { return youtubeVideoId; }
+    public String getDescription()     { return description; }
+    public Integer getDurationSeconds(){ return durationSeconds; }
+    public Integer getEpisodeNumber()  { return episodeNumber; }
 
     public void setId(UUID id)              { this.id = id; }
     public void setSlug(String slug)        { this.slug = slug; }
@@ -70,4 +86,8 @@ public class PostJpaEntity {
     public void setCreatedAt(Instant v)              { this.createdAt = v; }
     public void setUpdatedAt(Instant v)     { this.updatedAt = v; }
     public void setCreatedBy(UUID v)        { this.createdBy = v; }
+    public void setYoutubeVideoId(String v)   { this.youtubeVideoId = v; }
+    public void setDescription(String v)      { this.description = v; }
+    public void setDurationSeconds(Integer v) { this.durationSeconds = v; }
+    public void setEpisodeNumber(Integer v)   { this.episodeNumber = v; }
 }

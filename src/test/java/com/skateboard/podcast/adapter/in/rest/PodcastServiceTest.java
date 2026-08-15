@@ -81,6 +81,37 @@ class PodcastServiceTest {
     }
 
     @Test
+    void getPostMapsYoutubeFieldsToDto() {
+        Post post = Post.create("Skateboard Podcast #87", "skateboard-podcast-87", PostStatus.PUBLISHED,
+                Instant.parse("2026-01-01T00:00:00Z"), "http://thumb.jpg", "[]", "[]", null);
+        post.attachYoutubeMetadata("dQw4w9WgXcQ", "Episode description", 3725, 87);
+        when(getPostUseCase.execute(0, 10)).thenReturn(new GetPostUseCase.Result(List.of(post), 1));
+
+        PostResponse dto = service.getPost(0, 10).getPosts().get(0);
+
+        assertThat(dto.getYoutubeVideoId()).isEqualTo("dQw4w9WgXcQ");
+        assertThat(dto.getYoutubeUrl()).isEqualTo("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+        assertThat(dto.getDescription()).isEqualTo("Episode description");
+        assertThat(dto.getDurationSeconds()).isEqualTo(3725);
+        assertThat(dto.getEpisodeNumber()).isEqualTo(87);
+    }
+
+    @Test
+    void getPostLeavesYoutubeFieldsNullForManuallyCreatedPosts() {
+        Post post = Post.create("Manual Post", "manual-post", PostStatus.PUBLISHED,
+                null, null, "[]", "[]", null);
+        when(getPostUseCase.execute(0, 10)).thenReturn(new GetPostUseCase.Result(List.of(post), 1));
+
+        PostResponse dto = service.getPost(0, 10).getPosts().get(0);
+
+        assertThat(dto.getYoutubeVideoId()).isNull();
+        assertThat(dto.getYoutubeUrl()).isNull();
+        assertThat(dto.getDescription()).isNull();
+        assertThat(dto.getDurationSeconds()).isNull();
+        assertThat(dto.getEpisodeNumber()).isNull();
+    }
+
+    @Test
     void getPostBySlugReturnsNullWhenNotFound() {
         when(getPostBySlugUseCase.execute("missing")).thenReturn(Optional.empty());
 

@@ -22,6 +22,10 @@ public class CreatePostService implements CreatePostUseCase {
         String slug = ensureUniqueSlug(input.slug());
         Post post = Post.create(input.title(), slug, input.status(), input.publishAt(),
                 input.coverUrl(), input.blocksJson(), input.socialMediaLinksJson(), input.createdBy());
+        if (input.youtubeVideoId() != null) {
+            post.attachYoutubeMetadata(input.youtubeVideoId(), input.description(),
+                    input.durationSeconds(), input.episodeNumber());
+        }
         return savePostPort.save(post);
     }
 

@@ -297,6 +297,23 @@ components:
         createdBy:
           type: string
           format: uuid
+        youtubeVideoId:
+          type: string
+          nullable: true
+          description: Set only for posts ingested from the YouTube sync job.
+        youtubeUrl:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+          description: Plain-text video description from YouTube; not present on manually-authored posts predating the sync.
+        durationSeconds:
+          type: integer
+          nullable: true
+        episodeNumber:
+          type: integer
+          nullable: true
 
     FeedPageResponse:
       type: object

@@ -43,3 +43,16 @@ app:
       # Tokens must include this in their "aud" claim (see the FE client's
       # "audience" protocol mapper in .docker/keycloak/realm-export.json).
       audience: ${APP_SECURITY_OAUTH2_AUDIENCE:skateboard-podcast-be}
+
+youtube:
+  api:
+    base-url: https://www.googleapis.com/youtube/v3
+    # Never logged, never returned in a response — see YoutubeClient.
+    key: ${YOUTUBE_API_KEY:}
+    connect-timeout-ms: 5000
+    read-timeout-ms: 10000
+  channel-id: ${YOUTUBE_CHANNEL_ID:}
+  sync:
+    enabled: ${YOUTUBE_SYNC_ENABLED:false}
+    cron: ${YOUTUBE_SYNC_CRON:0 */10 * * * *}
+    initial-import-limit: ${YOUTUBE_SYNC_IMPORT_LIMIT:20}

@@ -11,6 +11,7 @@ import java.util.UUID;
 
 public interface SpringPostRepository extends JpaRepository<PostJpaEntity, UUID> {
     Optional<PostJpaEntity> findBySlug(String slug);
+    Optional<PostJpaEntity> findByYoutubeVideoId(String youtubeVideoId);
     long countByStatus(String status);
     boolean existsBySlug(String slug);
 
