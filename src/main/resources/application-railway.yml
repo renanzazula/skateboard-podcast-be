@@ -11,12 +11,11 @@ spring:
     password: ${SPRING_DATASOURCE_PASSWORD:postgres}
 
   jpa:
-    # Flyway owns the schema (db/migration); Hibernate only validates its matches.
+    open-in-view: false
     hibernate:
       ddl-auto: validate
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
         default_schema: skateboard_podcast
 
   flyway:
