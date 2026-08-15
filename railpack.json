@@ -6,7 +6,7 @@
       "commands": [
         "chmod +x ./mvnw",
         "./mvnw clean package -DskipTests",
-        "cp target/ui-backend-0.0.1-SNAPSHOT.jar target/app.jar"
+        "cp target/podcast-0.0.1-SNAPSHOT.jar target/app.jar"
       ]
     }
   },
