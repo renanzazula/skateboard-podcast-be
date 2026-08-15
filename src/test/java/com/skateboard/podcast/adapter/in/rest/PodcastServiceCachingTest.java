@@ -125,13 +125,16 @@ class PodcastServiceCachingTest {
     }
 
     @Test
-    void categoriesAreCached() {
+    void categoriesAreNotCached() {
+        // Deliberately uncached — see PodcastService.getCategories' javadoc:
+        // caching a bare List<T> at the cache-entry root breaks under
+        // CacheConfig's Jackson default-typing setup.
         when(getCategoriesUseCase.execute()).thenReturn(new GetCategoriesUseCase.Result(List.of()));
 
         service.getCategories();
         service.getCategories();
 
-        verify(getCategoriesUseCase, times(1)).execute();
+        verify(getCategoriesUseCase, times(2)).execute();
     }
 
     @Test

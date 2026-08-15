@@ -83,7 +83,17 @@ public class PodcastService {
                 .orElse(null);
     }
 
-    @Cacheable(cacheNames = POST_CACHE, key = "'categories'")
+    // Deliberately not @Cacheable: this would be the only cache entry whose
+    // value is a bare List<T> rather than a wrapping POJO (FeedPageResponse,
+    // PostResponse). CacheConfig's Redis serializer relies on Jackson default
+    // typing to survive Spring Cache's type erasure, and default typing
+    // serializes a root-level List differently than it does a List-valued
+    // *property* inside an object — write and read end up asymmetric, which
+    // surfaced in production as a 500 on the second call (first call writes
+    // the bad shape, second call fails to read it back: "Unexpected token
+    // (START_OBJECT), expected VALUE_STRING ... contains type id"). The
+    // category list is cheap to compute (no YouTube calls, two small local
+    // queries), so it's not worth fighting the serializer for.
     public List<CategoryResponse> getCategories() {
         List<CategoryResponse> categories = getCategoriesUseCase.execute().categories().stream()
                 .map(this::toCategoryDto)
