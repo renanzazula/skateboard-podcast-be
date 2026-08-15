@@ -24,9 +24,19 @@ spring:
     schemas: skateboard-podcast
     create-schemas: true
 
-  # In-memory cache manager — this standalone service assumes no Redis.
   cache:
-    type: simple
+    type: redis
+    redis:
+      time-to-live: 24h  # picked up by CacheConfig's RedisCacheManagerBuilderCustomizer
+
+  data:
+    redis:
+      # Private-network URL (REDISHOST resolves to RAILWAY_PRIVATE_DOMAIN) —
+      # no public TCP proxy hop needed since Redis and this service run in
+      # the same Railway project.
+      url: ${REDIS_URL}
+      repositories:
+        enabled: false
 
   security:
     oauth2:
@@ -51,7 +61,7 @@ youtube:
     key: ${YOUTUBE_API_KEY:}
     connect-timeout-ms: 5000
     read-timeout-ms: 10000
-  channel-id: ${YOUTUBE_CHANNEL_ID:UCzUpgudHBORsFCJnAO-B7kw}
+  channel-id: ${YOUTUBE_CHANNEL_ID:}
   sync:
     enabled: ${YOUTUBE_SYNC_ENABLED:false}
     cron: ${YOUTUBE_SYNC_CRON:0 */10 * * * *}
