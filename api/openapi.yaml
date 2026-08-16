@@ -336,6 +336,175 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /api/admin/categories:
+    get:
+      tags: [podcast]
+      operationId: getAdminCategories
+      summary: List every category, disabled ones included (admin only)
+      security:
+        - bearerAuth: []
+      x-required-permissions:
+        - FUNC_PODCAST_MANAGE_CATEGORIES
+      responses:
+        '200':
+          description: All categories in display order
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdminCategoryResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden – admin role required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/admin/categories/{id}:
+    patch:
+      tags: [podcast]
+      operationId: updateCategory
+      summary: Rename a category (admin only); null name resets to the YouTube title
+      security:
+        - bearerAuth: []
+      x-required-permissions:
+        - FUNC_PODCAST_MANAGE_CATEGORIES
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCategoryRequest'
+      responses:
+        '200':
+          description: Updated category
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminCategoryResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden – admin role required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Category not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/admin/categories/order:
+    put:
+      tags: [podcast]
+      operationId: reorderCategories
+      summary: Set the display order of all categories (admin only)
+      description: >
+        Takes the complete ordered id list — a permutation of every category,
+        disabled ones included — and writes display_order 0..n-1. Rejected
+        with 400 when ids are unknown, duplicated, or the list is stale
+        (doesn't cover every category).
+      security:
+        - bearerAuth: []
+      x-required-permissions:
+        - FUNC_PODCAST_MANAGE_CATEGORIES
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReorderCategoriesRequest'
+      responses:
+        '200':
+          description: Categories in their new order
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdminCategoryResponse'
+        '400':
+          description: Unknown, duplicated, or missing category ids
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden – admin role required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/admin/categories/{id}/default:
+    put:
+      tags: [podcast]
+      operationId: setDefaultCategory
+      summary: Make this category the single default (admin only)
+      description: >
+        Clears the default flag on every other category and locks defaulting
+        against the YouTube sync — youtube.default-playlist-id stops applying
+        once an admin has chosen.
+      security:
+        - bearerAuth: []
+      x-required-permissions:
+        - FUNC_PODCAST_MANAGE_CATEGORIES
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: The new default category
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminCategoryResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden – admin role required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Category not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -540,6 +709,60 @@ components:
           format: int64
       # Deliberately no source/externalId — the FE must not know YouTube
       # playlist IDs (README_YOUTUBE_PLAYLIST_CATEGORIES_MIGRATION.md §14).
+
+    AdminCategoryResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        name:
+          type: string
+          description: Effective display name (customName when set, else the YouTube title).
+        youtubeName:
+          type: string
+          description: The playlist title as the sync last saw it.
+        customName:
+          type: string
+          nullable: true
+          description: Admin rename override; null when the YouTube title is used as-is.
+        coverUrl:
+          type: string
+          nullable: true
+        enabled:
+          type: boolean
+          description: False when the source playlist disappeared from YouTube.
+        default:
+          type: boolean
+        displayOrder:
+          type: integer
+          nullable: true
+          description: Admin-set position; null sorts after all positioned categories.
+        postCount:
+          type: integer
+          format: int64
+      # Like CategoryResponse, deliberately no source/externalId.
+
+    UpdateCategoryRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          nullable: true
+          description: New display name; null or blank resets to the YouTube title.
+
+    ReorderCategoriesRequest:
+      type: object
+      required: [categoryIds]
+      properties:
+        categoryIds:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            format: uuid
 
     SyncResultResponse:
       type: object

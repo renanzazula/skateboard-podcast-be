@@ -238,6 +238,57 @@ class SynchronizeYoutubeChannelServiceTest {
     }
 
     @Test
+    void adminRenameAndDefaultSurviveTheSync() {
+        // Admin renamed the category and picked it as default (which locks
+        // defaulting); config points at a different playlist entirely.
+        properties.setDefaultPlaylistId("PL_OTHER");
+        stubChannelResolution();
+        when(youtubeContentPort.getPlaylists("UC_TEST_CHANNEL")).thenReturn(List.of(playlist("PL1", "Podcasts Renamed")));
+        Category existing = Category.createFromYoutube("podcasts", "PL1", "Podcasts", "old desc", "old-cover", false);
+        existing.rename("My Interviews");
+        existing.markDefault();
+        when(categoryRepositoryPort.findAll()).thenReturn(List.of(existing));
+        when(categoryRepositoryPort.findByExternalId("YOUTUBE", "PL1")).thenReturn(Optional.of(existing));
+        when(youtubeContentPort.getAllPlaylistItems("PL1")).thenReturn(List.of());
+
+        service.execute();
+
+        ArgumentCaptor<Category> captor = ArgumentCaptor.forClass(Category.class);
+        verify(categoryRepositoryPort).save(captor.capture());
+        Category saved = captor.getValue();
+        assertThat(saved.getName()).isEqualTo("Podcasts Renamed"); // YouTube's half keeps refreshing
+        assertThat(saved.getCustomName()).isEqualTo("My Interviews");
+        assertThat(saved.getEffectiveName()).isEqualTo("My Interviews");
+        assertThat(saved.isDefault()).isTrue(); // config no longer applies once locked
+    }
+
+    @Test
+    void newPlaylistIsNotDefaultedWhileDefaultIsAdminOwned() {
+        // Config points at the new playlist, but an admin already picked a
+        // default elsewhere — the new category must not become a second default.
+        properties.setDefaultPlaylistId("PL_NEW");
+        stubChannelResolution();
+        when(youtubeContentPort.getPlaylists("UC_TEST_CHANNEL"))
+                .thenReturn(List.of(playlist("PL_NEW", "New Playlist"), playlist("PL1", "Podcasts")));
+        Category adminDefault = Category.createFromYoutube("podcasts", "PL1", "Podcasts", null, null, false);
+        adminDefault.markDefault();
+        when(categoryRepositoryPort.findAll()).thenReturn(List.of(adminDefault));
+        when(categoryRepositoryPort.findByExternalId("YOUTUBE", "PL_NEW")).thenReturn(Optional.empty());
+        when(categoryRepositoryPort.findByExternalId("YOUTUBE", "PL1")).thenReturn(Optional.of(adminDefault));
+        when(youtubeContentPort.getAllPlaylistItems(anyString())).thenReturn(List.of());
+
+        service.execute();
+
+        ArgumentCaptor<Category> captor = ArgumentCaptor.forClass(Category.class);
+        verify(categoryRepositoryPort, times(2)).save(captor.capture());
+        assertThat(captor.getAllValues())
+                .filteredOn(c -> c.getExternalId().equals("PL_NEW")).singleElement()
+                .satisfies(c -> assertThat(c.isDefault()).isFalse());
+        // The admin-picked default is untouched by the config change.
+        assertThat(adminDefault.isDefault()).isTrue();
+    }
+
+    @Test
     void missingPlaylistDisablesCategory() {
         stubChannelResolution();
         when(youtubeContentPort.getPlaylists("UC_TEST_CHANNEL")).thenReturn(List.of());

@@ -65,13 +65,28 @@ class PodcastServiceCachingTest {
         SynchronizeYoutubeChannelUseCase synchronizeYoutubeChannelUseCase() { return mock(SynchronizeYoutubeChannelUseCase.class); }
 
         @Bean
+        GetAdminCategoriesUseCase getAdminCategoriesUseCase() { return mock(GetAdminCategoriesUseCase.class); }
+
+        @Bean
+        UpdateCategoryUseCase updateCategoryUseCase() { return mock(UpdateCategoryUseCase.class); }
+
+        @Bean
+        ReorderCategoriesUseCase reorderCategoriesUseCase() { return mock(ReorderCategoriesUseCase.class); }
+
+        @Bean
+        SetDefaultCategoryUseCase setDefaultCategoryUseCase() { return mock(SetDefaultCategoryUseCase.class); }
+
+        @Bean
         PodcastService podcastService(CreatePostUseCase create, GetPostUseCase feed,
                                       GetPostBySlugUseCase bySlug, UpdatePostUseCase update,
                                       DeletePostUseCase delete, ImportPostsUseCase importPosts,
                                       GetCategoriesUseCase categories, GetPostsByCategoryUseCase postsByCategory,
+                                      GetAdminCategoriesUseCase adminCategories, UpdateCategoryUseCase updateCategory,
+                                      ReorderCategoriesUseCase reorderCategories, SetDefaultCategoryUseCase setDefaultCategory,
                                       SynchronizeYoutubeChannelUseCase sync) {
             return new PodcastService(create, feed, bySlug, update, delete, importPosts,
-                    categories, postsByCategory, sync, new ObjectMapper());
+                    categories, postsByCategory, adminCategories, updateCategory,
+                    reorderCategories, setDefaultCategory, sync, new ObjectMapper());
         }
     }
 

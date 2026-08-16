@@ -86,11 +86,15 @@ changes start here and flow outward.
 ```sql
 ALTER TABLE category ADD COLUMN custom_name    VARCHAR(255);
 ALTER TABLE category ADD COLUMN default_locked BOOLEAN NOT NULL DEFAULT FALSE;
-
--- Enforce the single-default invariant at the database, not just in code.
-CREATE UNIQUE INDEX uk_category_single_default
-    ON category ((TRUE)) WHERE is_default;
 ```
+
+> **Implementation note:** the originally planned partial unique index on
+> `is_default` was dropped. Unique checks are immediate per statement in
+> Postgres, so Hibernate's flush ordering inside the set-default transaction
+> (and the sync's own default transition when `youtube.default-playlist-id`
+> changes) could trip it on legitimate writes. The single-default invariant is
+> enforced by `SetDefaultCategoryService` instead — one transaction, clears
+> written before the new default.
 
 ### Domain — `Category`
 
@@ -201,7 +205,7 @@ unchanged, and an old FE keeps working against a new backend throughout.
 | New playlist appears after a reorder | `display_order` is null → sorts last until an admin places it. |
 | Default category gets disabled | `applyDefaultFallback` already covers the "no default in list" case; keep it as the safety net. |
 | Reorder with a stale id list | 400 with the standard error shape; FE refetches and retries. |
-| Two admins set different defaults | Last write wins; the partial unique index makes a torn state impossible. |
+| Two admins set different defaults | Last write wins; each set-default is one transaction that clears every other row first, so no torn state is persisted. |
 
 **Deliberately out of scope:** creating or deleting categories by hand (they
 mirror playlists — manage those on YouTube), hiding/showing categories

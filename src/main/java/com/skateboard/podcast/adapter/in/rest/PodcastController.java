@@ -87,6 +87,30 @@ public class PodcastController implements PodcastApi {
         return ResponseEntity.ok(podcastService.getPostsByCategory(slug, p, s));
     }
 
+    @Override
+    @PreAuthorize("hasAuthority('FUNC_PODCAST_MANAGE_CATEGORIES')")
+    public ResponseEntity<List<AdminCategoryResponse>> getAdminCategories() {
+        return ResponseEntity.ok(podcastService.getAdminCategories());
+    }
+
+    @Override
+    @PreAuthorize("hasAuthority('FUNC_PODCAST_MANAGE_CATEGORIES')")
+    public ResponseEntity<AdminCategoryResponse> updateCategory(UUID id, UpdateCategoryRequest req) {
+        return ResponseEntity.ok(podcastService.updateCategory(id, req));
+    }
+
+    @Override
+    @PreAuthorize("hasAuthority('FUNC_PODCAST_MANAGE_CATEGORIES')")
+    public ResponseEntity<List<AdminCategoryResponse>> reorderCategories(ReorderCategoriesRequest req) {
+        return ResponseEntity.ok(podcastService.reorderCategories(req));
+    }
+
+    @Override
+    @PreAuthorize("hasAuthority('FUNC_PODCAST_MANAGE_CATEGORIES')")
+    public ResponseEntity<AdminCategoryResponse> setDefaultCategory(UUID id) {
+        return ResponseEntity.ok(podcastService.setDefaultCategory(id));
+    }
+
     private UUID resolveCurrentUserId() {
         try {
             String name = SecurityContextHolder.getContext().getAuthentication().getName();

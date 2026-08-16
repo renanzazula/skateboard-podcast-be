@@ -122,12 +122,19 @@ public class SynchronizeYoutubeChannelService implements SynchronizeYoutubeChann
         List<YoutubeContentPort.YoutubePlaylist> playlists = youtubeContentPort.getPlaylists(channelId);
         Set<String> activeExternalIds = new HashSet<>();
 
+        // Once an admin has picked a default (SetDefaultCategoryService locks
+        // every row), the config-driven default stops applying — including to
+        // categories this very sync is about to create, which have no lock of
+        // their own yet.
+        boolean defaultAdminOwned = categoryRepositoryPort.findAll().stream()
+                .anyMatch(Category::isDefaultLocked);
+
         int created = 0;
         int categoryChanges = 0;
         for (YoutubeContentPort.YoutubePlaylist playlist : playlists) {
             activeExternalIds.add(playlist.playlistId());
             try {
-                Category category = upsertCategory(playlist);
+                Category category = upsertCategory(playlist, defaultAdminOwned);
                 PlaylistPostSyncOutcome outcome = syncPlaylistPosts(category, playlist.playlistId());
                 created += outcome.created();
                 categoryChanges += outcome.categoryChanges();
@@ -146,8 +153,9 @@ public class SynchronizeYoutubeChannelService implements SynchronizeYoutubeChann
         return new CategorySyncOutcome(created, categoryChanges);
     }
 
-    private Category upsertCategory(YoutubeContentPort.YoutubePlaylist playlist) {
-        boolean isDefault = playlist.playlistId().equals(properties.getDefaultPlaylistId());
+    private Category upsertCategory(YoutubeContentPort.YoutubePlaylist playlist, boolean defaultAdminOwned) {
+        boolean isDefault = !defaultAdminOwned
+                && playlist.playlistId().equals(properties.getDefaultPlaylistId());
         Optional<Category> existing = categoryRepositoryPort.findByExternalId(SOURCE_YOUTUBE, playlist.playlistId());
         if (existing.isPresent()) {
             Category category = existing.get();

@@ -21,6 +21,9 @@ public class CategoryJpaEntity {
     @Column(nullable = false, length = 255)
     private String name;
 
+    @Column(name = "custom_name", length = 255)
+    private String customName;
+
     @Column(columnDefinition = "text")
     private String description;
 
@@ -42,6 +45,9 @@ public class CategoryJpaEntity {
     @Column(name = "is_default", nullable = false)
     private boolean isDefault;
 
+    @Column(name = "default_locked", nullable = false)
+    private boolean defaultLocked;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -53,6 +59,7 @@ public class CategoryJpaEntity {
     public UUID getId()             { return id; }
     public String getSlug()         { return slug; }
     public String getName()         { return name; }
+    public String getCustomName()   { return customName; }
     public String getDescription()  { return description; }
     public String getCoverUrl()     { return coverUrl; }
     public String getSource()       { return source; }
@@ -60,12 +67,14 @@ public class CategoryJpaEntity {
     public boolean isEnabled()      { return enabled; }
     public Integer getDisplayOrder(){ return displayOrder; }
     public boolean isDefault()      { return isDefault; }
+    public boolean isDefaultLocked(){ return defaultLocked; }
     public Instant getCreatedAt()   { return createdAt; }
     public Instant getUpdatedAt()   { return updatedAt; }
 
     public void setId(UUID v)             { this.id = v; }
     public void setSlug(String v)         { this.slug = v; }
     public void setName(String v)         { this.name = v; }
+    public void setCustomName(String v)   { this.customName = v; }
     public void setDescription(String v)  { this.description = v; }
     public void setCoverUrl(String v)     { this.coverUrl = v; }
     public void setSource(String v)       { this.source = v; }
@@ -73,6 +82,7 @@ public class CategoryJpaEntity {
     public void setEnabled(boolean v)     { this.enabled = v; }
     public void setDisplayOrder(Integer v){ this.displayOrder = v; }
     public void setDefault(boolean v)     { this.isDefault = v; }
+    public void setDefaultLocked(boolean v){ this.defaultLocked = v; }
     public void setCreatedAt(Instant v)   { this.createdAt = v; }
     public void setUpdatedAt(Instant v)   { this.updatedAt = v; }
 }

@@ -40,6 +40,11 @@ public class CategoryPersistenceAdapter implements CategoryRepositoryPort, PostC
     }
 
     @Override
+    public Optional<Category> findById(UUID id) {
+        return categoryRepository.findById(id).map(this::toDomain);
+    }
+
+    @Override
     public Category save(Category category) {
         return toDomain(categoryRepository.save(toEntity(category)));
     }
@@ -96,8 +101,9 @@ public class CategoryPersistenceAdapter implements CategoryRepositoryPort, PostC
     // ── Mapping ──────────────────────────────────────────────────────────────
 
     private Category toDomain(CategoryJpaEntity e) {
-        return Category.reconstitute(e.getId(), e.getSlug(), e.getName(), e.getDescription(), e.getCoverUrl(),
-                e.getSource(), e.getExternalId(), e.isEnabled(), e.getDisplayOrder(), e.isDefault(),
+        return Category.reconstitute(e.getId(), e.getSlug(), e.getName(), e.getCustomName(),
+                e.getDescription(), e.getCoverUrl(), e.getSource(), e.getExternalId(),
+                e.isEnabled(), e.getDisplayOrder(), e.isDefault(), e.isDefaultLocked(),
                 e.getCreatedAt(), e.getUpdatedAt());
     }
 
@@ -106,6 +112,7 @@ public class CategoryPersistenceAdapter implements CategoryRepositoryPort, PostC
         e.setId(category.getId());
         e.setSlug(category.getSlug());
         e.setName(category.getName());
+        e.setCustomName(category.getCustomName());
         e.setDescription(category.getDescription());
         e.setCoverUrl(category.getCoverUrl());
         e.setSource(category.getSource());
@@ -113,6 +120,7 @@ public class CategoryPersistenceAdapter implements CategoryRepositoryPort, PostC
         e.setEnabled(category.isEnabled());
         e.setDisplayOrder(category.getDisplayOrder());
         e.setDefault(category.isDefault());
+        e.setDefaultLocked(category.isDefaultLocked());
         e.setCreatedAt(category.getCreatedAt());
         e.setUpdatedAt(category.getUpdatedAt());
         return e;
