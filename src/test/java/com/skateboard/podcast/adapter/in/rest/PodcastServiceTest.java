@@ -53,6 +53,18 @@ class PodcastServiceTest {
     @Mock
     private SynchronizeYoutubeChannelUseCase synchronizeYoutubeChannelUseCase;
 
+    @Mock
+    private GetAdminCategoriesUseCase getAdminCategoriesUseCase;
+
+    @Mock
+    private UpdateCategoryUseCase updateCategoryUseCase;
+
+    @Mock
+    private ReorderCategoriesUseCase reorderCategoriesUseCase;
+
+    @Mock
+    private SetDefaultCategoryUseCase setDefaultCategoryUseCase;
+
     private PodcastService service;
 
     @BeforeEach
@@ -60,7 +72,9 @@ class PodcastServiceTest {
         MockitoAnnotations.openMocks(this);
         service = new PodcastService(createPostUseCase, getPostUseCase, getPostBySlugUseCase,
                 updatePostUseCase, deletePostUseCase, importPostsUseCase, getCategoriesUseCase,
-                getPostsByCategoryUseCase, synchronizeYoutubeChannelUseCase, new ObjectMapper());
+                getPostsByCategoryUseCase, getAdminCategoriesUseCase, updateCategoryUseCase,
+                reorderCategoriesUseCase, setDefaultCategoryUseCase,
+                synchronizeYoutubeChannelUseCase, new ObjectMapper());
     }
 
     @Test

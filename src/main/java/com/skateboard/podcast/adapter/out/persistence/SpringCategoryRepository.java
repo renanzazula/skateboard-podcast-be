@@ -13,7 +13,9 @@ public interface SpringCategoryRepository extends JpaRepository<CategoryJpaEntit
     Optional<CategoryJpaEntity> findBySlug(String slug);
     boolean existsBySlug(String slug);
 
+    // Admin-set positions win; categories a later sync created (null
+    // displayOrder) append after them, newest last.
     @Query("SELECT c FROM CategoryJpaEntity c WHERE c.enabled = true " +
-           "ORDER BY c.isDefault DESC, c.createdAt ASC")
+           "ORDER BY c.displayOrder ASC NULLS LAST, c.isDefault DESC, c.createdAt ASC")
     List<CategoryJpaEntity> findAllEnabledOrdered();
 }

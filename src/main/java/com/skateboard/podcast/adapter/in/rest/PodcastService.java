@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.skateboard.application.dto.*;
 import com.skateboard.podcast.application.port.in.*;
+import com.skateboard.podcast.domain.model.Category;
 import com.skateboard.podcast.domain.model.Post;
 import com.skateboard.podcast.domain.model.PostStatus;
 import org.springframework.cache.annotation.CacheEvict;
@@ -36,6 +37,10 @@ public class PodcastService {
     private final ImportPostsUseCase importPostsUseCase;
     private final GetCategoriesUseCase getCategoriesUseCase;
     private final GetPostsByCategoryUseCase getPostsByCategoryUseCase;
+    private final GetAdminCategoriesUseCase getAdminCategoriesUseCase;
+    private final UpdateCategoryUseCase updateCategoryUseCase;
+    private final ReorderCategoriesUseCase reorderCategoriesUseCase;
+    private final SetDefaultCategoryUseCase setDefaultCategoryUseCase;
     private final SynchronizeYoutubeChannelUseCase synchronizeYoutubeChannelUseCase;
     private final ObjectMapper objectMapper;
 
@@ -47,6 +52,10 @@ public class PodcastService {
                           ImportPostsUseCase importPostsUseCase,
                           GetCategoriesUseCase getCategoriesUseCase,
                           GetPostsByCategoryUseCase getPostsByCategoryUseCase,
+                          GetAdminCategoriesUseCase getAdminCategoriesUseCase,
+                          UpdateCategoryUseCase updateCategoryUseCase,
+                          ReorderCategoriesUseCase reorderCategoriesUseCase,
+                          SetDefaultCategoryUseCase setDefaultCategoryUseCase,
                           SynchronizeYoutubeChannelUseCase synchronizeYoutubeChannelUseCase,
                           ObjectMapper objectMapper) {
         this.createPostUseCase = createPostUseCase;
@@ -57,6 +66,10 @@ public class PodcastService {
         this.importPostsUseCase = importPostsUseCase;
         this.getCategoriesUseCase = getCategoriesUseCase;
         this.getPostsByCategoryUseCase = getPostsByCategoryUseCase;
+        this.getAdminCategoriesUseCase = getAdminCategoriesUseCase;
+        this.updateCategoryUseCase = updateCategoryUseCase;
+        this.reorderCategoriesUseCase = reorderCategoriesUseCase;
+        this.setDefaultCategoryUseCase = setDefaultCategoryUseCase;
         this.synchronizeYoutubeChannelUseCase = synchronizeYoutubeChannelUseCase;
         this.objectMapper = objectMapper;
     }
@@ -168,6 +181,41 @@ public class PodcastService {
                 .errors(result.errors());
     }
 
+    // ── Category admin (uncached, like getCategories — the list is cheap
+    //    and feeds are keyed by slug, which never changes) ──────────────────
+
+    public List<AdminCategoryResponse> getAdminCategories() {
+        return getAdminCategoriesUseCase.execute().categories().stream()
+                .map(c -> toAdminCategoryDto(c.category(), c.postCount()))
+                .toList();
+    }
+
+    public AdminCategoryResponse updateCategory(UUID id, UpdateCategoryRequest req) {
+        return toAdminCategoryDto(
+                updateCategoryUseCase.execute(new UpdateCategoryUseCase.Input(id, req.getName())),
+                adminCategoryCounts().getOrDefault(id, 0L));
+    }
+
+    public List<AdminCategoryResponse> reorderCategories(ReorderCategoriesRequest req) {
+        Map<UUID, Long> counts = adminCategoryCounts();
+        return reorderCategoriesUseCase.execute(new ReorderCategoriesUseCase.Input(req.getCategoryIds()))
+                .categories().stream()
+                .map(c -> toAdminCategoryDto(c, counts.getOrDefault(c.getId(), 0L)))
+                .toList();
+    }
+
+    public AdminCategoryResponse setDefaultCategory(UUID id) {
+        return toAdminCategoryDto(setDefaultCategoryUseCase.execute(id),
+                adminCategoryCounts().getOrDefault(id, 0L));
+    }
+
+    private Map<UUID, Long> adminCategoryCounts() {
+        return getAdminCategoriesUseCase.execute().categories().stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        c -> c.category().getId(),
+                        GetAdminCategoriesUseCase.CategoryWithCount::postCount));
+    }
+
     // Not annotated with @CacheEvict here: SynchronizeYoutubeChannelService
     // owns its own eviction of POST_CACHE (conditional on something actually
     // changing) so the scheduled and manual "sync now" paths behave
@@ -189,10 +237,24 @@ public class PodcastService {
         return new CategoryResponse()
                 .id(category.getId())
                 .slug(category.getSlug())
-                .name(category.getName())
+                .name(category.getEffectiveName())
                 .coverUrl(category.getCoverUrl())
                 ._default(category.isDefault())
                 .postCount(categoryWithCount.postCount());
+    }
+
+    private AdminCategoryResponse toAdminCategoryDto(Category category, long postCount) {
+        return new AdminCategoryResponse()
+                .id(category.getId())
+                .slug(category.getSlug())
+                .name(category.getEffectiveName())
+                .youtubeName(category.getName())
+                .customName(category.getCustomName())
+                .coverUrl(category.getCoverUrl())
+                .enabled(category.isEnabled())
+                ._default(category.isDefault())
+                .displayOrder(category.getDisplayOrder())
+                .postCount(postCount);
     }
 
     // README §5's fallback: if sync never flagged a category isDefault (e.g.
