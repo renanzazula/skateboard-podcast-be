@@ -4,6 +4,8 @@ import com.skateboard.podcast.application.port.in.CreatePostUseCase;
 import com.skateboard.podcast.application.port.out.LoadPostPort;
 import com.skateboard.podcast.application.port.out.SavePostPort;
 import com.skateboard.podcast.domain.model.Post;
+import com.skateboard.podcast.domain.model.PostPlatform;
+import com.skateboard.podcast.domain.model.PostPlatformLink;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -25,6 +27,8 @@ public class CreatePostService implements CreatePostUseCase {
         if (input.youtubeVideoId() != null) {
             post.attachYoutubeMetadata(input.youtubeVideoId(), input.description(),
                     input.durationSeconds(), input.episodeNumber());
+            post.attachPlatformLink(new PostPlatformLink(PostPlatform.YOUTUBE, input.youtubeVideoId(),
+                    "https://www.youtube.com/watch?v=" + input.youtubeVideoId()));
         }
         return savePostPort.save(post);
     }

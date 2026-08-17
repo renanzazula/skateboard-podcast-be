@@ -9,6 +9,7 @@ import com.skateboard.podcast.application.port.out.YoutubeContentPort;
 import com.skateboard.podcast.domain.model.Category;
 import com.skateboard.podcast.domain.model.Post;
 import com.skateboard.podcast.domain.model.PostStatus;
+import com.skateboard.podcast.infrastructure.spotify.SpotifyProperties;
 import com.skateboard.podcast.infrastructure.youtube.YoutubeProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -82,12 +83,17 @@ class SynchronizeYoutubeChannelServiceCachingTest {
         }
 
         @Bean
+        SpotifyProperties spotifyProperties() { return new SpotifyProperties(); }
+
+        @Bean
         SynchronizeYoutubeChannelService synchronizeYoutubeChannelService(
                 YoutubeContentPort youtubeContentPort, LoadPostPort loadPostPort,
                 CreatePostUseCase createPostUseCase, CategoryRepositoryPort categoryRepositoryPort,
-                PostCategoryPort postCategoryPort, YoutubeProperties properties) {
+                PostCategoryPort postCategoryPort, YoutubeProperties properties, SpotifyProperties spotifyProperties) {
+            // Spotify sync stays disabled (default) — matchSpotifyEpisodeService is
+            // never invoked, so a null dependency here is safe.
             return new SynchronizeYoutubeChannelService(youtubeContentPort, loadPostPort, createPostUseCase,
-                    categoryRepositoryPort, postCategoryPort, properties);
+                    categoryRepositoryPort, postCategoryPort, properties, null, spotifyProperties);
         }
 
         @Bean

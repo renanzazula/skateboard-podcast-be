@@ -121,6 +121,27 @@ class PodcastServiceTest {
     }
 
     @Test
+    void getPostMapsPlatformLinksToDto() {
+        Post post = Post.create("Skateboard Podcast #87", "skateboard-podcast-87", PostStatus.PUBLISHED,
+                Instant.parse("2026-01-01T00:00:00Z"), "http://thumb.jpg", "[]", "[]", null);
+        post.attachPlatformLink(new com.skateboard.podcast.domain.model.PostPlatformLink(
+                com.skateboard.podcast.domain.model.PostPlatform.YOUTUBE, "dQw4w9WgXcQ",
+                "https://www.youtube.com/watch?v=dQw4w9WgXcQ"));
+        post.attachPlatformLink(new com.skateboard.podcast.domain.model.PostPlatformLink(
+                com.skateboard.podcast.domain.model.PostPlatform.SPOTIFY, "6xyz789",
+                "https://open.spotify.com/episode/6xyz789"));
+        when(getPostUseCase.execute(0, 10)).thenReturn(new GetPostUseCase.Result(List.of(post), 1));
+
+        PostResponse dto = service.getPost(0, 10).getPosts().get(0);
+
+        assertThat(dto.getPlatforms()).hasSize(2);
+        assertThat(dto.getPlatforms())
+                .filteredOn(p -> p.getPlatform() == PostPlatformResponse.PlatformEnum.SPOTIFY)
+                .singleElement()
+                .satisfies(p -> assertThat(p.getExternalUrl()).isEqualTo("https://open.spotify.com/episode/6xyz789"));
+    }
+
+    @Test
     void getPostLeavesYoutubeFieldsNullForManuallyCreatedPosts() {
         Post post = Post.create("Manual Post", "manual-post", PostStatus.PUBLISHED,
                 null, null, "[]", "[]", null);

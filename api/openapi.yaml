@@ -577,6 +577,21 @@ components:
         episodeNumber:
           type: integer
           nullable: true
+        platforms:
+          type: array
+          description: Distribution-platform links for this episode (YouTube, Spotify, ...). May be empty for manually-authored posts.
+          items:
+            $ref: '#/components/schemas/PostPlatformResponse'
+
+    PostPlatformResponse:
+      type: object
+      properties:
+        platform:
+          type: string
+          enum: [YOUTUBE, SPOTIFY]
+        externalUrl:
+          type: string
+          nullable: true
 
     FeedPageResponse:
       type: object
@@ -777,6 +792,15 @@ components:
           type: integer
         success:
           type: boolean
+        spotifyMatched:
+          type: integer
+          description: Spotify episodes successfully linked to an existing post this run.
+        spotifyUnmatched:
+          type: integer
+          description: Spotify episodes fetched but not confidently matched to any post; retried next run.
+        spotifyErrors:
+          type: integer
+          description: Non-zero only when the Spotify fetch/match step itself failed (auth, API, etc.); YouTube sync still completes.
 
     ErrorResponse:
       type: object

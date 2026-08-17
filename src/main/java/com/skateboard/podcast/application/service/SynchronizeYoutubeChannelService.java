@@ -10,6 +10,7 @@ import com.skateboard.podcast.application.port.out.YoutubeContentPort;
 import com.skateboard.podcast.domain.model.Category;
 import com.skateboard.podcast.domain.model.Post;
 import com.skateboard.podcast.domain.model.PostStatus;
+import com.skateboard.podcast.infrastructure.spotify.SpotifyProperties;
 import com.skateboard.podcast.infrastructure.youtube.YoutubeProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,8 +23,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Polls the configured YouTube channel and:
@@ -44,8 +43,6 @@ public class SynchronizeYoutubeChannelService implements SynchronizeYoutubeChann
 
     private static final Logger log = LoggerFactory.getLogger(SynchronizeYoutubeChannelService.class);
     private static final String SOURCE_YOUTUBE = "YOUTUBE";
-    // Same convention FE's episodeMeta.ts uses today for the show's own episode numbering.
-    private static final Pattern EPISODE_NUMBER = Pattern.compile("#(\\d+)\\s*$");
 
     private final YoutubeContentPort youtubeContentPort;
     private final LoadPostPort loadPostPort;
@@ -53,6 +50,8 @@ public class SynchronizeYoutubeChannelService implements SynchronizeYoutubeChann
     private final CategoryRepositoryPort categoryRepositoryPort;
     private final PostCategoryPort postCategoryPort;
     private final YoutubeProperties properties;
+    private final MatchSpotifyEpisodeService matchSpotifyEpisodeService;
+    private final SpotifyProperties spotifyProperties;
 
     private volatile String cachedUploadsPlaylistId;
 
@@ -60,18 +59,22 @@ public class SynchronizeYoutubeChannelService implements SynchronizeYoutubeChann
                                             CreatePostUseCase createPostUseCase,
                                             CategoryRepositoryPort categoryRepositoryPort,
                                             PostCategoryPort postCategoryPort,
-                                            YoutubeProperties properties) {
+                                            YoutubeProperties properties,
+                                            MatchSpotifyEpisodeService matchSpotifyEpisodeService,
+                                            SpotifyProperties spotifyProperties) {
         this.youtubeContentPort = youtubeContentPort;
         this.loadPostPort = loadPostPort;
         this.createPostUseCase = createPostUseCase;
         this.categoryRepositoryPort = categoryRepositoryPort;
         this.postCategoryPort = postCategoryPort;
         this.properties = properties;
+        this.matchSpotifyEpisodeService = matchSpotifyEpisodeService;
+        this.spotifyProperties = spotifyProperties;
     }
 
     @Override
     @CacheEvict(cacheNames = PodcastService.POST_CACHE, allEntries = true,
-            condition = "#result.created() > 0 || #result.categoryChanges() > 0")
+            condition = "#result.created() > 0 || #result.categoryChanges() > 0 || #result.spotifyMatched() > 0")
     public Result execute() {
         String channelId = properties.getChannelId();
         if (channelId == null || channelId.isBlank()) {
@@ -111,7 +114,25 @@ public class SynchronizeYoutubeChannelService implements SynchronizeYoutubeChann
 
         log.info("youtubeSync channelId={} status=SUCCESS received={} created={} existing={} categoryChanges={}",
                 channelId, received, created, existing, categoryChanges);
-        return new Result(received, created, existing, categoryChanges, true);
+
+        // Isolated from the YouTube result above (README §22): a Spotify
+        // failure must not affect the YouTube sync outcome or throw past here.
+        int spotifyMatched = 0;
+        int spotifyUnmatched = 0;
+        int spotifyErrors = 0;
+        if (spotifyProperties.getSync().isEnabled()) {
+            try {
+                MatchSpotifyEpisodeService.Result spotifyResult = matchSpotifyEpisodeService.execute();
+                spotifyMatched = spotifyResult.matched();
+                spotifyUnmatched = spotifyResult.unmatched();
+            } catch (Exception e) {
+                spotifyErrors = 1;
+                log.warn("spotifySync status=FAILURE reason={}", e.getMessage());
+            }
+        }
+
+        return new Result(received, created, existing, categoryChanges, true,
+                spotifyMatched, spotifyUnmatched, spotifyErrors);
     }
 
     // ── Playlists -> categories -> post associations ────────────────────────
@@ -275,13 +296,7 @@ public class SynchronizeYoutubeChannelService implements SynchronizeYoutubeChann
         return createPostUseCase.execute(new CreatePostUseCase.Input(
                 video.title(), slug, PostStatus.PUBLISHED, video.publishedAt(),
                 video.thumbnailUrl(), "[]", null, null,
-                video.videoId(), video.description(), durationSeconds, parseEpisodeNumber(video.title())));
-    }
-
-    private Integer parseEpisodeNumber(String title) {
-        if (title == null) return null;
-        Matcher matcher = EPISODE_NUMBER.matcher(title.trim());
-        return matcher.find() ? Integer.parseInt(matcher.group(1)) : null;
+                video.videoId(), video.description(), durationSeconds, EpisodeNumberParser.parse(video.title())));
     }
 
     private String ensureUniqueCategorySlug(String base) {

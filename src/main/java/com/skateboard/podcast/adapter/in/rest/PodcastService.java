@@ -227,7 +227,10 @@ public class PodcastService {
                 .created(result.created())
                 .existing(result.existing())
                 .categoryChanges(result.categoryChanges())
-                .success(result.success());
+                .success(result.success())
+                .spotifyMatched(result.spotifyMatched())
+                .spotifyUnmatched(result.spotifyUnmatched())
+                .spotifyErrors(result.spotifyErrors());
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
@@ -292,7 +295,14 @@ public class PodcastService {
                         ? "https://www.youtube.com/watch?v=" + post.getYoutubeVideoId() : null)
                 .description(post.getDescription())
                 .durationSeconds(post.getDurationSeconds())
-                .episodeNumber(post.getEpisodeNumber());
+                .episodeNumber(post.getEpisodeNumber())
+                .platforms(post.getPlatformLinks().stream().map(this::toPlatformDto).toList());
+    }
+
+    private PostPlatformResponse toPlatformDto(com.skateboard.podcast.domain.model.PostPlatformLink link) {
+        return new PostPlatformResponse()
+                .platform(PostPlatformResponse.PlatformEnum.valueOf(link.platform().name()))
+                .externalUrl(link.externalUrl());
     }
 
     private String blocksToJson(List<Map<String, Object>> blocks) {

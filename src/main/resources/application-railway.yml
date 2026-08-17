@@ -67,6 +67,22 @@ youtube:
     cron: ${YOUTUBE_SYNC_CRON:0 */10 * * * *}
     initial-import-limit: ${YOUTUBE_SYNC_IMPORT_LIMIT:20}
 
+spotify:
+  api:
+    base-url: https://api.spotify.com
+    token-url: https://accounts.spotify.com/api/token
+    client-id: ${SPOTIFY_CLIENT_ID:}
+    # Never logged, never returned in a response — see SpotifyTokenClient.
+    client-secret: ${SPOTIFY_CLIENT_SECRET:}
+    connect-timeout-ms: 5000
+    read-timeout-ms: 10000
+  show-id: ${SPOTIFY_SHOW_ID:}
+  market: ${SPOTIFY_MARKET:}
+  sync:
+    # Rides along on youtube.sync's cron cycle (PodcastService.triggerSync) —
+    # this only gates whether that pass also runs the Spotify enrichment step.
+    enabled: ${SPOTIFY_SYNC_ENABLED:false}
+
 logging:
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%X{correlationId}] [%thread] %logger{36} - %msg%n"

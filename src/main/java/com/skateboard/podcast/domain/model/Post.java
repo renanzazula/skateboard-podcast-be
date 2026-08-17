@@ -1,6 +1,9 @@
 package com.skateboard.podcast.domain.model;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 
 public class Post {
@@ -20,11 +23,13 @@ public class Post {
     private String description;
     private Integer durationSeconds;
     private Integer episodeNumber;
+    private final List<PostPlatformLink> platformLinks;
 
     private Post(UUID id, String slug, String title, PostStatus status, Instant publishAt,
                  String coverUrl, String blocksJson, String socialMediaLinksJson,
                  Instant createdAt, Instant updatedAt, UUID createdBy,
-                 String youtubeVideoId, String description, Integer durationSeconds, Integer episodeNumber) {
+                 String youtubeVideoId, String description, Integer durationSeconds, Integer episodeNumber,
+                 List<PostPlatformLink> platformLinks) {
         this.id = id;
         this.slug = slug;
         this.title = title;
@@ -40,6 +45,7 @@ public class Post {
         this.description = description;
         this.durationSeconds = durationSeconds;
         this.episodeNumber = episodeNumber;
+        this.platformLinks = platformLinks != null ? new ArrayList<>(platformLinks) : new ArrayList<>();
     }
 
     public static Post create(String title, String slug, PostStatus status, Instant publishAt,
@@ -47,16 +53,17 @@ public class Post {
         Instant now = Instant.now();
         return new Post(UUID.randomUUID(), slug, title, status, publishAt, coverUrl, blocksJson,
                 socialMediaLinksJson != null ? socialMediaLinksJson : "[]", now, now, createdBy,
-                null, null, null, null);
+                null, null, null, null, null);
     }
 
     public static Post reconstitute(UUID id, String slug, String title, PostStatus status, Instant publishAt,
                                     String coverUrl, String blocksJson, String socialMediaLinksJson,
                                     Instant createdAt, Instant updatedAt, UUID createdBy,
-                                    String youtubeVideoId, String description, Integer durationSeconds, Integer episodeNumber) {
+                                    String youtubeVideoId, String description, Integer durationSeconds, Integer episodeNumber,
+                                    List<PostPlatformLink> platformLinks) {
         return new Post(id, slug, title, status, publishAt, coverUrl, blocksJson,
                 socialMediaLinksJson != null ? socialMediaLinksJson : "[]", createdAt, updatedAt, createdBy,
-                youtubeVideoId, description, durationSeconds, episodeNumber);
+                youtubeVideoId, description, durationSeconds, episodeNumber, platformLinks);
     }
 
     public void update(String title, String slug, PostStatus status, Instant publishAt,
@@ -79,6 +86,12 @@ public class Post {
         this.episodeNumber = episodeNumber;
     }
 
+    /** Sync-only: attaches/replaces this episode's link for {@code link.platform()} — at most one link per platform. */
+    public void attachPlatformLink(PostPlatformLink link) {
+        platformLinks.removeIf(existing -> existing.platform() == link.platform());
+        platformLinks.add(link);
+    }
+
     public UUID getId()                        { return id; }
     public String getSlug()                    { return slug; }
     public String getTitle()                   { return title; }
@@ -94,4 +107,5 @@ public class Post {
     public String getDescription()             { return description; }
     public Integer getDurationSeconds()        { return durationSeconds; }
     public Integer getEpisodeNumber()          { return episodeNumber; }
+    public List<PostPlatformLink> getPlatformLinks() { return Collections.unmodifiableList(platformLinks); }
 }

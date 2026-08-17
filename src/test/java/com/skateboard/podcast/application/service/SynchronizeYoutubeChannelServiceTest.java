@@ -9,6 +9,7 @@ import com.skateboard.podcast.application.port.out.YoutubeContentPort;
 import com.skateboard.podcast.domain.model.Category;
 import com.skateboard.podcast.domain.model.Post;
 import com.skateboard.podcast.domain.model.PostStatus;
+import com.skateboard.podcast.infrastructure.spotify.SpotifyProperties;
 import com.skateboard.podcast.infrastructure.youtube.YoutubeProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,8 +49,11 @@ class SynchronizeYoutubeChannelServiceTest {
         properties = new YoutubeProperties();
         properties.setChannelId("UC_TEST_CHANNEL");
         properties.getSync().setInitialImportLimit(20);
+        // Spotify sync stays disabled here — spotifyEnrichment is exercised
+        // directly by MatchSpotifyEpisodeServiceTest, and matchSpotifyEpisodeService
+        // is never called while spotify.sync.enabled is false.
         service = new SynchronizeYoutubeChannelService(youtubeContentPort, loadPostPort, createPostUseCase,
-                categoryRepositoryPort, postCategoryPort, properties);
+                categoryRepositoryPort, postCategoryPort, properties, null, new SpotifyProperties());
 
         // Defaults so tests that only care about the uploads catch-all (or
         // only about playlists) don't have to stub the other side.

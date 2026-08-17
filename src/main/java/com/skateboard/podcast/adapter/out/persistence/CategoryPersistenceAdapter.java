@@ -4,6 +4,8 @@ import com.skateboard.podcast.application.port.out.CategoryRepositoryPort;
 import com.skateboard.podcast.application.port.out.PostCategoryPort;
 import com.skateboard.podcast.domain.model.Category;
 import com.skateboard.podcast.domain.model.Post;
+import com.skateboard.podcast.domain.model.PostPlatform;
+import com.skateboard.podcast.domain.model.PostPlatformLink;
 import com.skateboard.podcast.domain.model.PostStatus;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
@@ -14,17 +16,21 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Component
 public class CategoryPersistenceAdapter implements CategoryRepositoryPort, PostCategoryPort {
 
     private final SpringCategoryRepository categoryRepository;
     private final SpringPostCategoryRepository postCategoryRepository;
+    private final SpringPostPlatformLinkRepository platformLinkRepository;
 
     public CategoryPersistenceAdapter(SpringCategoryRepository categoryRepository,
-                                      SpringPostCategoryRepository postCategoryRepository) {
+                                      SpringPostCategoryRepository postCategoryRepository,
+                                      SpringPostPlatformLinkRepository platformLinkRepository) {
         this.categoryRepository = categoryRepository;
         this.postCategoryRepository = postCategoryRepository;
+        this.platformLinkRepository = platformLinkRepository;
     }
 
     // ── CategoryRepositoryPort ──────────────────────────────────────────────
@@ -78,9 +84,17 @@ public class CategoryPersistenceAdapter implements CategoryRepositoryPort, PostC
 
     @Override
     public List<Post> findPublishedByCategorySlug(String slug, int page, int size) {
-        return postCategoryRepository
+        List<PostJpaEntity> entities = postCategoryRepository
                 .findByCategorySlugAndStatus(slug, PostStatus.PUBLISHED.name(), PageRequest.of(page, size))
-                .stream().map(this::toDomainPost).toList();
+                .getContent();
+        List<UUID> postIds = entities.stream().map(PostJpaEntity::getId).toList();
+        Map<UUID, List<PostPlatformLink>> linksByPostId = postIds.isEmpty() ? Map.of()
+                : platformLinkRepository.findByPostIdIn(postIds).stream()
+                        .collect(Collectors.groupingBy(PostPlatformLinkJpaEntity::getPostId,
+                                Collectors.mapping(this::toLink, Collectors.toList())));
+        return entities.stream()
+                .map(e -> toDomainPost(e, linksByPostId.getOrDefault(e.getId(), List.of())))
+                .toList();
     }
 
     @Override
@@ -129,14 +143,19 @@ public class CategoryPersistenceAdapter implements CategoryRepositoryPort, PostC
     // Duplicated from PostPersistenceAdapter (which keeps this mapping
     // private) — same convention CLAUDE.md already documents for slug
     // generation across services.
-    private Post toDomainPost(PostJpaEntity e) {
+    private Post toDomainPost(PostJpaEntity e, List<PostPlatformLink> platformLinks) {
         return Post.reconstitute(
                 e.getId(), e.getSlug(), e.getTitle(),
                 PostStatus.valueOf(e.getStatus()),
                 e.getPublishAt(), e.getCoverUrl(), e.getBlocksJson(),
                 e.getSocialMediaLinksJson(),
                 e.getCreatedAt(), e.getUpdatedAt(), e.getCreatedBy(),
-                e.getYoutubeVideoId(), e.getDescription(), e.getDurationSeconds(), e.getEpisodeNumber()
+                e.getYoutubeVideoId(), e.getDescription(), e.getDurationSeconds(), e.getEpisodeNumber(),
+                platformLinks
         );
+    }
+
+    private PostPlatformLink toLink(PostPlatformLinkJpaEntity e) {
+        return new PostPlatformLink(PostPlatform.valueOf(e.getPlatform()), e.getExternalId(), e.getExternalUrl());
     }
 }
