@@ -8,7 +8,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 public interface SpringPostPlatformLinkRepository extends JpaRepository<PostPlatformLinkJpaEntity, UUID> {
@@ -16,8 +15,6 @@ public interface SpringPostPlatformLinkRepository extends JpaRepository<PostPlat
     List<PostPlatformLinkJpaEntity> findByPostId(UUID postId);
 
     List<PostPlatformLinkJpaEntity> findByPostIdIn(Collection<UUID> postIds);
-
-    Optional<PostPlatformLinkJpaEntity> findByPlatformAndExternalId(String platform, String externalId);
 
     @Modifying
     @Transactional

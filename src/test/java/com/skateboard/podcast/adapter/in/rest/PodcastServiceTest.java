@@ -154,6 +154,7 @@ class PodcastServiceTest {
         assertThat(dto.getDescription()).isNull();
         assertThat(dto.getDurationSeconds()).isNull();
         assertThat(dto.getEpisodeNumber()).isNull();
+        assertThat(dto.getPlatforms()).isEmpty();
     }
 
     @Test
