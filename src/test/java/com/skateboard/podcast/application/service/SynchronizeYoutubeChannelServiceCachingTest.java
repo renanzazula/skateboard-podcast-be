@@ -86,14 +86,20 @@ class SynchronizeYoutubeChannelServiceCachingTest {
         SpotifyProperties spotifyProperties() { return new SpotifyProperties(); }
 
         @Bean
+        YoutubeDescriptionParser youtubeDescriptionParser() {
+            return new YoutubeDescriptionParser(new ObjectMapper());
+        }
+
+        @Bean
         SynchronizeYoutubeChannelService synchronizeYoutubeChannelService(
                 YoutubeContentPort youtubeContentPort, LoadPostPort loadPostPort,
                 CreatePostUseCase createPostUseCase, CategoryRepositoryPort categoryRepositoryPort,
-                PostCategoryPort postCategoryPort, YoutubeProperties properties, SpotifyProperties spotifyProperties) {
+                PostCategoryPort postCategoryPort, YoutubeProperties properties, SpotifyProperties spotifyProperties,
+                YoutubeDescriptionParser descriptionParser) {
             // Spotify sync stays disabled (default) — matchSpotifyEpisodeService is
             // never invoked, so a null dependency here is safe.
             return new SynchronizeYoutubeChannelService(youtubeContentPort, loadPostPort, createPostUseCase,
-                    categoryRepositoryPort, postCategoryPort, properties, null, spotifyProperties);
+                    categoryRepositoryPort, postCategoryPort, properties, null, spotifyProperties, descriptionParser);
         }
 
         @Bean
@@ -155,7 +161,7 @@ class SynchronizeYoutubeChannelServiceCachingTest {
     }
 
     private YoutubeContentPort.YoutubeVideo video(String id) {
-        return new YoutubeContentPort.YoutubeVideo(id, "Ep " + id, "desc", Instant.parse("2026-01-01T00:00:00Z"), null);
+        return new YoutubeContentPort.YoutubeVideo(id, "Ep " + id, "desc", Instant.parse("2026-01-01T00:00:00Z"), "http://thumb/" + id);
     }
 
     private Post somePost() {

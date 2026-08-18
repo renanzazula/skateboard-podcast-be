@@ -52,6 +52,7 @@ public class SynchronizeYoutubeChannelService implements SynchronizeYoutubeChann
     private final YoutubeProperties properties;
     private final MatchSpotifyEpisodeService matchSpotifyEpisodeService;
     private final SpotifyProperties spotifyProperties;
+    private final YoutubeDescriptionParser descriptionParser;
 
     private volatile String cachedUploadsPlaylistId;
 
@@ -61,7 +62,8 @@ public class SynchronizeYoutubeChannelService implements SynchronizeYoutubeChann
                                             PostCategoryPort postCategoryPort,
                                             YoutubeProperties properties,
                                             MatchSpotifyEpisodeService matchSpotifyEpisodeService,
-                                            SpotifyProperties spotifyProperties) {
+                                            SpotifyProperties spotifyProperties,
+                                            YoutubeDescriptionParser descriptionParser) {
         this.youtubeContentPort = youtubeContentPort;
         this.loadPostPort = loadPostPort;
         this.createPostUseCase = createPostUseCase;
@@ -70,6 +72,7 @@ public class SynchronizeYoutubeChannelService implements SynchronizeYoutubeChann
         this.properties = properties;
         this.matchSpotifyEpisodeService = matchSpotifyEpisodeService;
         this.spotifyProperties = spotifyProperties;
+        this.descriptionParser = descriptionParser;
     }
 
     @Override
@@ -292,11 +295,15 @@ public class SynchronizeYoutubeChannelService implements SynchronizeYoutubeChann
     }
 
     private Post createPost(YoutubeContentPort.YoutubeVideo video, Integer durationSeconds) {
+        if (video.thumbnailUrl() == null || video.thumbnailUrl().isBlank()) {
+            throw new IllegalStateException("missing_cover_url");
+        }
         String slug = generateSlug(video.title());
+        YoutubeDescriptionParser.ParsedDescription parsed = descriptionParser.parse(video.description());
         return createPostUseCase.execute(new CreatePostUseCase.Input(
                 video.title(), slug, PostStatus.PUBLISHED, video.publishedAt(),
-                video.thumbnailUrl(), "[]", null, null,
-                video.videoId(), video.description(), durationSeconds, EpisodeNumberParser.parse(video.title())));
+                video.thumbnailUrl(), "[]", parsed.socialMediaLinksJson(), null,
+                video.videoId(), parsed.description(), durationSeconds, EpisodeNumberParser.parse(video.title())));
     }
 
     private String ensureUniqueCategorySlug(String base) {

@@ -11,6 +11,7 @@ import com.skateboard.podcast.domain.model.Post;
 import com.skateboard.podcast.domain.model.PostStatus;
 import com.skateboard.podcast.infrastructure.spotify.SpotifyProperties;
 import com.skateboard.podcast.infrastructure.youtube.YoutubeProperties;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -53,7 +54,8 @@ class SynchronizeYoutubeChannelServiceTest {
         // directly by MatchSpotifyEpisodeServiceTest, and matchSpotifyEpisodeService
         // is never called while spotify.sync.enabled is false.
         service = new SynchronizeYoutubeChannelService(youtubeContentPort, loadPostPort, createPostUseCase,
-                categoryRepositoryPort, postCategoryPort, properties, null, new SpotifyProperties());
+                categoryRepositoryPort, postCategoryPort, properties, null, new SpotifyProperties(),
+                new YoutubeDescriptionParser(new ObjectMapper()));
 
         // Defaults so tests that only care about the uploads catch-all (or
         // only about playlists) don't have to stub the other side.
@@ -67,6 +69,10 @@ class SynchronizeYoutubeChannelServiceTest {
 
     private YoutubeContentPort.YoutubeVideo video(String id, String title) {
         return new YoutubeContentPort.YoutubeVideo(id, title, "desc " + id, Instant.parse("2026-01-01T00:00:00Z"), "http://thumb/" + id);
+    }
+
+    private YoutubeContentPort.YoutubeVideo video(String id, String title, String description, String thumbnailUrl) {
+        return new YoutubeContentPort.YoutubeVideo(id, title, description, Instant.parse("2026-01-01T00:00:00Z"), thumbnailUrl);
     }
 
     private YoutubeContentPort.YoutubePlaylist playlist(String id, String title) {
@@ -179,6 +185,49 @@ class SynchronizeYoutubeChannelServiceTest {
 
         assertThat(result.created()).isEqualTo(1);
         verify(createPostUseCase, times(2)).execute(any());
+    }
+
+    @Test
+    void videoWithoutCoverUrlIsSkipped() {
+        stubChannelResolution();
+        when(youtubeContentPort.getLatestVideos("UU_TEST_UPLOADS", 20))
+                .thenReturn(List.of(video("v1", "Episode #1", "desc v1", null)));
+        when(loadPostPort.findByYoutubeVideoId("v1")).thenReturn(Optional.empty());
+        when(youtubeContentPort.getVideoDurations(any())).thenReturn(List.of());
+
+        SynchronizeYoutubeChannelUseCase.Result result = service.execute();
+
+        assertThat(result.created()).isEqualTo(0);
+        verifyNoInteractions(createPostUseCase);
+    }
+
+    @Test
+    void guestInstagramLinkIsExtractedIntoSocialMediaLinks() {
+        stubChannelResolution();
+        String rawDescription = """
+                As histórias por trás do skate na Europa.
+
+                APOIE NOSSO CANAL:https://buymeacoffee.com/skateboardpodcast
+                --------
+                CONVIDADO: https://www.instagram.com/mauricio.carvaiho/
+                --------
+                Apresentado por
+                ALEX CARDOSO: https://www.instagram.com/alexcardososk8/
+                """;
+        when(youtubeContentPort.getLatestVideos("UU_TEST_UPLOADS", 20))
+                .thenReturn(List.of(video("v1", "Episode #1", rawDescription, "http://thumb/v1")));
+        when(loadPostPort.findByYoutubeVideoId("v1")).thenReturn(Optional.empty());
+        when(youtubeContentPort.getVideoDurations(any())).thenReturn(List.of());
+        when(createPostUseCase.execute(any())).thenReturn(somePost());
+
+        service.execute();
+
+        ArgumentCaptor<CreatePostUseCase.Input> captor = ArgumentCaptor.forClass(CreatePostUseCase.Input.class);
+        verify(createPostUseCase).execute(captor.capture());
+        CreatePostUseCase.Input input = captor.getValue();
+        assertThat(input.description()).isEqualTo("As histórias por trás do skate na Europa.");
+        assertThat(input.socialMediaLinksJson())
+                .isEqualTo("[{\"platform\":\"instagram\",\"url\":\"https://www.instagram.com/mauricio.carvaiho\"}]");
     }
 
     // ── Playlists -> categories ──────────────────────────────────────────────
