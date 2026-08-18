@@ -96,6 +96,31 @@ class YoutubeClientTest {
     }
 
     @Test
+    void capturesThumbnailDimensionsFromTheChosenQuality() {
+        server.enqueue(new MockResponse().setBody("""
+                {"items":[
+                  {"snippet":{"title":"Ep 1","description":"d1","publishedAt":"2026-01-01T00:00:00Z",
+                    "thumbnails":{"high":{"url":"http://low","width":480,"height":360},
+                                  "maxres":{"url":"http://best","width":1280,"height":720}}},
+                   "contentDetails":{"videoId":"v1"}},
+                  {"snippet":{"title":"Ep 2","description":"d2","publishedAt":"2026-01-02T00:00:00Z",
+                    "thumbnails":{"high":{"url":"http://nodims"}}},"contentDetails":{"videoId":"v2"}}
+                ]}
+                """).addHeader("Content-Type", "application/json"));
+
+        List<YoutubeContentPort.YoutubeVideo> videos = client.getAllPlaylistItems("PL1");
+
+        // Dimensions come from whichever quality bestThumbnail picked, not the first listed.
+        assertThat(videos.get(0).thumbnailUrl()).isEqualTo("http://best");
+        assertThat(videos.get(0).thumbnailWidth()).isEqualTo(1280);
+        assertThat(videos.get(0).thumbnailHeight()).isEqualTo(720);
+        // A thumbnail without width/height stays null rather than failing the sync.
+        assertThat(videos.get(1).thumbnailUrl()).isEqualTo("http://nodims");
+        assertThat(videos.get(1).thumbnailWidth()).isNull();
+        assertThat(videos.get(1).thumbnailHeight()).isNull();
+    }
+
+    @Test
     void getAllPlaylistItemsPaginatesWithNoCap() {
         server.enqueue(new MockResponse().setBody("""
                 {"items":[

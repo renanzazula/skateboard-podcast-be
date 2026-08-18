@@ -302,7 +302,8 @@ public class SynchronizeYoutubeChannelService implements SynchronizeYoutubeChann
         YoutubeDescriptionParser.ParsedDescription parsed = descriptionParser.parse(video.description());
         return createPostUseCase.execute(new CreatePostUseCase.Input(
                 video.title(), slug, PostStatus.PUBLISHED, video.publishedAt(),
-                video.thumbnailUrl(), "[]", parsed.socialMediaLinksJson(), null,
+                video.thumbnailUrl(), video.thumbnailWidth(), video.thumbnailHeight(),
+                "[]", parsed.socialMediaLinksJson(), null,
                 video.videoId(), parsed.description(), durationSeconds, EpisodeNumberParser.parse(video.title())));
     }
 

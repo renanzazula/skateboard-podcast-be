@@ -12,7 +12,14 @@ public interface YoutubeContentPort {
 
     record YoutubeChannel(String channelId, String title, String uploadsPlaylistId) {}
 
-    record YoutubeVideo(String videoId, String title, String description, Instant publishedAt, String thumbnailUrl) {}
+    record YoutubeVideo(String videoId, String title, String description, Instant publishedAt,
+                        String thumbnailUrl, Integer thumbnailWidth, Integer thumbnailHeight) {
+
+        /** For callers that don't have (or don't care about) the thumbnail's pixel dimensions. */
+        public YoutubeVideo(String videoId, String title, String description, Instant publishedAt, String thumbnailUrl) {
+            this(videoId, title, description, publishedAt, thumbnailUrl, null, null);
+        }
+    }
 
     record YoutubeVideoDuration(String videoId, Integer durationSeconds) {}
 

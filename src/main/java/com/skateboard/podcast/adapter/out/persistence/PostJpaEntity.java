@@ -30,6 +30,12 @@ public class PostJpaEntity {
     @Column(columnDefinition = "text")
     private String coverUrl;
 
+    @Column(name = "cover_width")
+    private Integer coverWidth;
+
+    @Column(name = "cover_height")
+    private Integer coverHeight;
+
     @Column(nullable = false, columnDefinition = "text")
     private String blocksJson;
 
@@ -65,6 +71,8 @@ public class PostJpaEntity {
     public String getStatus()    { return status; }
     public Instant getPublishAt(){ return publishAt; }
     public String getCoverUrl()  { return coverUrl; }
+    public Integer getCoverWidth()  { return coverWidth; }
+    public Integer getCoverHeight() { return coverHeight; }
     public String getBlocksJson()           { return blocksJson; }
     public String getSocialMediaLinksJson() { return socialMediaLinksJson; }
     public Instant getCreatedAt()           { return createdAt; }
@@ -81,6 +89,8 @@ public class PostJpaEntity {
     public void setStatus(String status)    { this.status = status; }
     public void setPublishAt(Instant v)     { this.publishAt = v; }
     public void setCoverUrl(String v)       { this.coverUrl = v; }
+    public void setCoverWidth(Integer v)    { this.coverWidth = v; }
+    public void setCoverHeight(Integer v)   { this.coverHeight = v; }
     public void setBlocksJson(String v)              { this.blocksJson = v; }
     public void setSocialMediaLinksJson(String v)    { this.socialMediaLinksJson = v; }
     public void setCreatedAt(Instant v)              { this.createdAt = v; }
