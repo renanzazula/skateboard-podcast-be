@@ -541,6 +541,17 @@ components:
           format: date-time
         coverUrl:
           type: string
+        coverWidth:
+          type: integer
+          nullable: true
+          description: >
+            Intrinsic pixel width of coverUrl, captured from the YouTube API at
+            sync time. Null on manually-authored posts and on posts predating
+            the capture. Lets clients lay out a cover without measuring it first.
+        coverHeight:
+          type: integer
+          nullable: true
+          description: Intrinsic pixel height of coverUrl; see coverWidth.
         blocks:
           type: array
           items:

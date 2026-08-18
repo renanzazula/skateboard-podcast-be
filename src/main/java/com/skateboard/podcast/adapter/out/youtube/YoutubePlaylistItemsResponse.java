@@ -14,8 +14,10 @@ record YoutubePlaylistItemsResponse(List<Item> items, String nextPageToken) {
     @JsonIgnoreProperties(ignoreUnknown = true)
     record Snippet(String title, String description, String publishedAt, Map<String, Thumbnail> thumbnails) {}
 
+    // width/height come straight from the YouTube API's thumbnail objects —
+    // the Home gallery sizes its masonry tiles from them (see V6 migration).
     @JsonIgnoreProperties(ignoreUnknown = true)
-    record Thumbnail(String url) {}
+    record Thumbnail(String url, Integer width, Integer height) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     record ContentDetails(String videoId) {}

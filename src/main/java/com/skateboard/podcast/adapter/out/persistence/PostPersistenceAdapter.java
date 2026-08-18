@@ -141,7 +141,8 @@ public class PostPersistenceAdapter implements LoadPostPort, SavePostPort {
         return Post.reconstitute(
                 e.getId(), e.getSlug(), e.getTitle(),
                 PostStatus.valueOf(e.getStatus()),
-                e.getPublishAt(), e.getCoverUrl(), e.getBlocksJson(),
+                e.getPublishAt(), e.getCoverUrl(), e.getCoverWidth(), e.getCoverHeight(),
+                e.getBlocksJson(),
                 e.getSocialMediaLinksJson(),
                 e.getCreatedAt(), e.getUpdatedAt(), e.getCreatedBy(),
                 e.getYoutubeVideoId(), e.getDescription(), e.getDurationSeconds(), e.getEpisodeNumber(),
@@ -157,6 +158,8 @@ public class PostPersistenceAdapter implements LoadPostPort, SavePostPort {
         e.setStatus(post.getStatus().name());
         e.setPublishAt(post.getPublishAt());
         e.setCoverUrl(post.getCoverUrl());
+        e.setCoverWidth(post.getCoverWidth());
+        e.setCoverHeight(post.getCoverHeight());
         e.setBlocksJson(post.getBlocksJson() != null ? post.getBlocksJson() : "[]");
         e.setSocialMediaLinksJson(post.getSocialMediaLinksJson() != null ? post.getSocialMediaLinksJson() : "[]");
         e.setCreatedAt(post.getCreatedAt());

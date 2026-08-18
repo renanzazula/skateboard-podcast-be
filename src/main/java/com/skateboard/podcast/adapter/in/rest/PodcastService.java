@@ -285,6 +285,8 @@ public class PodcastService {
                 .status(PostResponse.StatusEnum.fromValue(post.getStatus().name().toLowerCase()))
                 .publishAt(post.getPublishAt() != null ? post.getPublishAt().atOffset(ZoneOffset.UTC) : null)
                 .coverUrl(post.getCoverUrl())
+                .coverWidth(post.getCoverWidth())
+                .coverHeight(post.getCoverHeight())
                 .blocks(parseBlocks(post.getBlocksJson()))
                 .socialMediaLinks(parseSocialLinks(post.getSocialMediaLinksJson()))
                 .createdAt(post.getCreatedAt().atOffset(ZoneOffset.UTC))

@@ -147,7 +147,8 @@ public class CategoryPersistenceAdapter implements CategoryRepositoryPort, PostC
         return Post.reconstitute(
                 e.getId(), e.getSlug(), e.getTitle(),
                 PostStatus.valueOf(e.getStatus()),
-                e.getPublishAt(), e.getCoverUrl(), e.getBlocksJson(),
+                e.getPublishAt(), e.getCoverUrl(), e.getCoverWidth(), e.getCoverHeight(),
+                e.getBlocksJson(),
                 e.getSocialMediaLinksJson(),
                 e.getCreatedAt(), e.getUpdatedAt(), e.getCreatedBy(),
                 e.getYoutubeVideoId(), e.getDescription(), e.getDurationSeconds(), e.getEpisodeNumber(),

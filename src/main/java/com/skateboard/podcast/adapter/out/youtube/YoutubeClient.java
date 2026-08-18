@@ -95,12 +95,15 @@ public class YoutubeClient implements YoutubeContentPort {
             if (response == null || response.items() == null) break;
             for (YoutubePlaylistItemsResponse.Item item : response.items()) {
                 if (item.contentDetails() == null || item.snippet() == null) continue;
+                YoutubePlaylistItemsResponse.Thumbnail thumbnail = bestThumbnail(item.snippet().thumbnails());
                 videos.add(new YoutubeVideo(
                         item.contentDetails().videoId(),
                         item.snippet().title(),
                         item.snippet().description(),
                         parsePublishedAt(item.snippet().publishedAt()),
-                        bestThumbnail(item.snippet().thumbnails())));
+                        thumbnail != null ? thumbnail.url() : null,
+                        thumbnail != null ? thumbnail.width() : null,
+                        thumbnail != null ? thumbnail.height() : null));
                 if (limit != null && videos.size() >= limit) break;
             }
             pageToken = response.nextPageToken();
@@ -124,8 +127,9 @@ public class YoutubeClient implements YoutubeContentPort {
             if (response == null || response.items() == null) break;
             for (YoutubePlaylistListResponse.Item item : response.items()) {
                 if (item.snippet() == null) continue;
+                YoutubePlaylistItemsResponse.Thumbnail thumbnail = bestThumbnail(item.snippet().thumbnails());
                 playlists.add(new YoutubePlaylist(item.id(), item.snippet().title(),
-                        item.snippet().description(), bestThumbnail(item.snippet().thumbnails())));
+                        item.snippet().description(), thumbnail != null ? thumbnail.url() : null));
             }
             pageToken = response.nextPageToken();
         } while (pageToken != null);
@@ -193,11 +197,13 @@ public class YoutubeClient implements YoutubeContentPort {
         }
     }
 
-    private static String bestThumbnail(Map<String, YoutubePlaylistItemsResponse.Thumbnail> thumbnails) {
+    /** The highest-quality thumbnail the API returned, with its pixel dimensions when present. */
+    private static YoutubePlaylistItemsResponse.Thumbnail bestThumbnail(
+            Map<String, YoutubePlaylistItemsResponse.Thumbnail> thumbnails) {
         if (thumbnails == null) return null;
         for (String quality : THUMBNAIL_PREFERENCE) {
             YoutubePlaylistItemsResponse.Thumbnail thumbnail = thumbnails.get(quality);
-            if (thumbnail != null && thumbnail.url() != null) return thumbnail.url();
+            if (thumbnail != null && thumbnail.url() != null) return thumbnail;
         }
         return null;
     }
