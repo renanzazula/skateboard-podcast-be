@@ -8,5 +8,5 @@ public interface GetPostUseCase {
 
     record Result(List<Post> posts, long total) {}
 
-    Result execute(int page, int size);
+    Result execute(String search, int page, int size);
 }

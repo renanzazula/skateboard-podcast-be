@@ -77,6 +77,23 @@ public class PostPersistenceAdapter implements LoadPostPort, SavePostPort {
     }
 
     @Override
+    public List<Post> searchPublished(String query, int page, int size) {
+        PageRequest pageable = PageRequest.of(page, size);
+        List<PostJpaEntity> entities = jpaRepository
+                .searchByStatusAndTitle(PostStatus.PUBLISHED.name(), query, pageable)
+                .getContent();
+        return toDomainWithLinks(entities);
+    }
+
+    @Override
+    public long countSearchPublished(String query) {
+        // @Query-backed Page methods derive their count from a separate
+        // COUNT query, so this doesn't load the matching rows themselves —
+        // the page size here only bounds the (unused) content list.
+        return jpaRepository.searchByStatusAndTitle(PostStatus.PUBLISHED.name(), query, PageRequest.of(0, 1)).getTotalElements();
+    }
+
+    @Override
     public List<Post> findAll(int page, int size) {
         PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         List<PostJpaEntity> entities = jpaRepository.findAll(pageable).getContent();

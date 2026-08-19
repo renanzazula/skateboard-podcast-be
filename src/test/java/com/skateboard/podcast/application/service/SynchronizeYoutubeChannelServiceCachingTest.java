@@ -65,6 +65,8 @@ class SynchronizeYoutubeChannelServiceCachingTest {
         @Bean
         GetPostBySlugUseCase getPostBySlugUseCase() { return mock(GetPostBySlugUseCase.class); }
         @Bean
+        GetPostByIdUseCase getPostByIdUseCase() { return mock(GetPostByIdUseCase.class); }
+        @Bean
         UpdatePostUseCase updatePostUseCase() { return mock(UpdatePostUseCase.class); }
         @Bean
         DeletePostUseCase deletePostUseCase() { return mock(DeletePostUseCase.class); }
@@ -121,13 +123,13 @@ class SynchronizeYoutubeChannelServiceCachingTest {
 
         @Bean
         PodcastService podcastService(CreatePostUseCase create, GetPostUseCase feed,
-                                      GetPostBySlugUseCase bySlug, UpdatePostUseCase update,
+                                      GetPostBySlugUseCase bySlug, GetPostByIdUseCase byId, UpdatePostUseCase update,
                                       DeletePostUseCase delete, ImportPostsUseCase importPosts,
                                       GetCategoriesUseCase categories, GetPostsByCategoryUseCase postsByCategory,
                                       GetAdminCategoriesUseCase adminCategories, UpdateCategoryUseCase updateCategory,
                                       ReorderCategoriesUseCase reorderCategories, SetDefaultCategoryUseCase setDefaultCategory,
                                       SynchronizeYoutubeChannelUseCase sync) {
-            return new PodcastService(create, feed, bySlug, update, delete, importPosts,
+            return new PodcastService(create, feed, bySlug, byId, update, delete, importPosts,
                     categories, postsByCategory, adminCategories, updateCategory,
                     reorderCategories, setDefaultCategory, sync, new ObjectMapper());
         }
@@ -151,7 +153,7 @@ class SynchronizeYoutubeChannelServiceCachingTest {
     void setUp() {
         reset(youtubeContentPort, loadPostPort, createPostUseCase, getPostUseCase, categoryRepositoryPort, postCategoryPort);
         cacheManager.getCache(PodcastService.POST_CACHE).clear();
-        when(getPostUseCase.execute(anyInt(), anyInt())).thenReturn(new GetPostUseCase.Result(List.of(), 0));
+        when(getPostUseCase.execute(any(), anyInt(), anyInt())).thenReturn(new GetPostUseCase.Result(List.of(), 0));
         when(youtubeContentPort.resolveChannel("UC_TEST_CHANNEL"))
                 .thenReturn(new YoutubeContentPort.YoutubeChannel("UC_TEST_CHANNEL", "Show", "UU_TEST_UPLOADS"));
         when(youtubeContentPort.getVideoDurations(any())).thenReturn(List.of());
@@ -174,11 +176,11 @@ class SynchronizeYoutubeChannelServiceCachingTest {
         when(loadPostPort.findByYoutubeVideoId("v1")).thenReturn(Optional.empty());
         when(createPostUseCase.execute(any())).thenReturn(somePost());
 
-        podcastService.getPost(0, 10);
+        podcastService.getPost(null, 0, 10);
         syncService.execute();
-        podcastService.getPost(0, 10);
+        podcastService.getPost(null, 0, 10);
 
-        verify(getPostUseCase, times(2)).execute(0, 10);
+        verify(getPostUseCase, times(2)).execute(null, 0, 10);
     }
 
     @Test
@@ -193,11 +195,11 @@ class SynchronizeYoutubeChannelServiceCachingTest {
         Post existingPost = somePost();
         when(loadPostPort.findByYoutubeVideoId("v1")).thenReturn(Optional.of(existingPost));
 
-        podcastService.getPost(0, 10);
+        podcastService.getPost(null, 0, 10);
         syncService.execute();
-        podcastService.getPost(0, 10);
+        podcastService.getPost(null, 0, 10);
 
-        verify(getPostUseCase, times(2)).execute(0, 10);
+        verify(getPostUseCase, times(2)).execute(null, 0, 10);
     }
 
     @Test
@@ -205,10 +207,10 @@ class SynchronizeYoutubeChannelServiceCachingTest {
         when(youtubeContentPort.getLatestVideos(anyString(), anyInt())).thenReturn(List.of(video("v1")));
         when(loadPostPort.findByYoutubeVideoId("v1")).thenReturn(Optional.of(somePost()));
 
-        podcastService.getPost(0, 10);
+        podcastService.getPost(null, 0, 10);
         syncService.execute();
-        podcastService.getPost(0, 10);
+        podcastService.getPost(null, 0, 10);
 
-        verify(getPostUseCase, times(1)).execute(0, 10);
+        verify(getPostUseCase, times(1)).execute(null, 0, 10);
     }
 }

@@ -24,17 +24,27 @@ public class PodcastController implements PodcastApi {
 
     @Override
     @PreAuthorize("hasAuthority('FUNC_TAB_PODCAST')")
-    public ResponseEntity<FeedPageResponse> getPodcastFeed(Integer page, Integer size) {
+    public ResponseEntity<FeedPageResponse> getPodcastFeed(Integer page, Integer size, String search) {
         // Clamp before the service call so the cache-key space is bounded.
         int p = page != null ? page : 0;
         int s = size != null ? Math.min(size, 50) : 10;
-        return ResponseEntity.ok(podcastService.getPost(p, s));
+        return ResponseEntity.ok(podcastService.getPost(search, p, s));
     }
 
     @Override
     @PreAuthorize("hasAuthority('FUNC_TAB_PODCAST')")
     public ResponseEntity<PostResponse> getPodcastPostBySlug(String slug) {
         PostResponse response = podcastService.getPostBySlug(slug);
+        if (response == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Post not found");
+        }
+        return ResponseEntity.ok(response);
+    }
+
+    @Override
+    @PreAuthorize("hasAuthority('FUNC_TAB_PODCAST')")
+    public ResponseEntity<PostResponse> getPodcastPostById(UUID id) {
+        PostResponse response = podcastService.getPostById(id);
         if (response == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Post not found");
         }

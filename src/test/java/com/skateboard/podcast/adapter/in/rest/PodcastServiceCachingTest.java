@@ -53,6 +53,8 @@ class PodcastServiceCachingTest {
         @Bean
         GetPostBySlugUseCase getPostBySlugUseCase() { return mock(GetPostBySlugUseCase.class); }
         @Bean
+        GetPostByIdUseCase getPostByIdUseCase() { return mock(GetPostByIdUseCase.class); }
+        @Bean
         UpdatePostUseCase updatePostUseCase() { return mock(UpdatePostUseCase.class); }
         @Bean DeletePostUseCase deletePostUseCase() { return mock(DeletePostUseCase.class); }
         @Bean
@@ -78,13 +80,13 @@ class PodcastServiceCachingTest {
 
         @Bean
         PodcastService podcastService(CreatePostUseCase create, GetPostUseCase feed,
-                                      GetPostBySlugUseCase bySlug, UpdatePostUseCase update,
+                                      GetPostBySlugUseCase bySlug, GetPostByIdUseCase byId, UpdatePostUseCase update,
                                       DeletePostUseCase delete, ImportPostsUseCase importPosts,
                                       GetCategoriesUseCase categories, GetPostsByCategoryUseCase postsByCategory,
                                       GetAdminCategoriesUseCase adminCategories, UpdateCategoryUseCase updateCategory,
                                       ReorderCategoriesUseCase reorderCategories, SetDefaultCategoryUseCase setDefaultCategory,
                                       SynchronizeYoutubeChannelUseCase sync) {
-            return new PodcastService(create, feed, bySlug, update, delete, importPosts,
+            return new PodcastService(create, feed, bySlug, byId, update, delete, importPosts,
                     categories, postsByCategory, adminCategories, updateCategory,
                     reorderCategories, setDefaultCategory, sync, new ObjectMapper());
         }
@@ -105,18 +107,18 @@ class PodcastServiceCachingTest {
         reset(createPostUseCase, getPostUseCase, getPostBySlugUseCase,
                 deletePostUseCase, importPostsUseCase, getCategoriesUseCase, getPostsByCategoryUseCase);
         cacheManager.getCache(PodcastService.POST_CACHE).clear();
-        when(getPostUseCase.execute(anyInt(), anyInt()))
+        when(getPostUseCase.execute(any(), anyInt(), anyInt()))
                 .thenReturn(new GetPostUseCase.Result(List.of(), 0));
     }
 
     @Test
     void feedIsCachedPerPageAndSize() {
-        service.getPost(0, 10);
-        service.getPost(0, 10);
-        verify(getPostUseCase, times(1)).execute(0, 10);
+        service.getPost(null, 0, 10);
+        service.getPost(null, 0, 10);
+        verify(getPostUseCase, times(1)).execute(null, 0, 10);
 
-        service.getPost(1, 10);
-        verify(getPostUseCase, times(1)).execute(1, 10);
+        service.getPost(null, 1, 10);
+        verify(getPostUseCase, times(1)).execute(null, 1, 10);
     }
 
     @Test
@@ -169,42 +171,42 @@ class PodcastServiceCachingTest {
     void createEvictsBothCaches() {
         when(getPostBySlugUseCase.execute("ep-1")).thenReturn(Optional.of(publishedPost()));
         when(createPostUseCase.execute(any())).thenReturn(publishedPost());
-        service.getPost(0, 10);
+        service.getPost(null, 0, 10);
         service.getPostBySlug("ep-1");
 
         CreatePostRequest createPostRequest = new CreatePostRequest();
         createPostRequest.setTitle("New Episode");
         service.createPost(createPostRequest, UUID.randomUUID());
 
-        service.getPost(0, 10);
+        service.getPost(null, 0, 10);
         service.getPostBySlug("ep-1");
-        verify(getPostUseCase, times(2)).execute(0, 10);
+        verify(getPostUseCase, times(2)).execute(null, 0, 10);
         verify(getPostBySlugUseCase, times(2)).execute("ep-1");
     }
 
     @Test
     void deleteEvictsFeedCache() {
-        service.getPost(0, 10);
+        service.getPost(null, 0, 10);
 
         service.deletePost(UUID.randomUUID());
 
-        service.getPost(0, 10);
-        verify(getPostUseCase, times(2)).execute(0, 10);
+        service.getPost(null, 0, 10);
+        verify(getPostUseCase, times(2)).execute(null, 0, 10);
     }
 
     @Test
     void importEvictsFeedCache() {
         when(importPostsUseCase.execute(any()))
                 .thenReturn(new ImportPostsUseCase.Result(1, 0, List.of()));
-        service.getPost(0, 10);
+        service.getPost(null, 0, 10);
 
         ImportPostsRequest importPostsRequest = new ImportPostsRequest();
         importPostsRequest.posts(List.of(new ImportPostItem().title("Ep")));
 
         service.importPosts(importPostsRequest, UUID.randomUUID());
 
-        service.getPost(0, 10);
-        verify(getPostUseCase, times(2)).execute(0, 10);
+        service.getPost(null, 0, 10);
+        verify(getPostUseCase, times(2)).execute(null, 0, 10);
     }
 
     private Post publishedPost() {

@@ -11,6 +11,8 @@ public interface LoadPostPort {
     Optional<Post> findByYoutubeVideoId(String youtubeVideoId);
     List<Post> findPublished(int page, int size);
     long countPublished();
+    List<Post> searchPublished(String query, int page, int size);
+    long countSearchPublished(String query);
     List<Post> findAll(int page, int size);
     long countAll();
     boolean existsBySlug(String slug);

@@ -34,6 +34,10 @@ paths:
         - name: size
           in: query
           schema: { type: integer, default: 10 }
+        - name: search
+          in: query
+          description: Case-insensitive title filter (used by the Home Featured Player episode picker)
+          schema: { type: string }
       responses:
         '200':
           description: Podcast feed page
@@ -101,6 +105,45 @@ paths:
           in: path
           required: true
           schema: { type: string }
+      responses:
+        '200':
+          description: Podcast post detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Post not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/podcast/id/{id}:
+    get:
+      tags: [podcast]
+      operationId: getPodcastPostById
+      summary: >-
+        Get a single podcast post by id, regardless of status. Used by
+        cross-service consumers (e.g. the Home Featured Player resolver in
+        skateboard-ui-backend) that only hold the internal post id, not the
+        slug — callers must check `status` themselves if only published
+        content is wanted.
+      security:
+        - bearerAuth: []
+      x-required-permissions:
+        - FUNC_TAB_PODCAST
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
         '200':
           description: Podcast post detail

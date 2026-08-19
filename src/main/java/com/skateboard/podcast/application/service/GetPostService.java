@@ -17,9 +17,14 @@ public class GetPostService implements GetPostUseCase {
     }
 
     @Override
-    public Result execute(int page, int size) {
-        List<Post> posts = loadPostPort.findPublished(page, size);
-        long total = loadPostPort.countPublished();
+    public Result execute(String search, int page, int size) {
+        if (search == null || search.isBlank()) {
+            List<Post> posts = loadPostPort.findPublished(page, size);
+            long total = loadPostPort.countPublished();
+            return new Result(posts, total);
+        }
+        List<Post> posts = loadPostPort.searchPublished(search, page, size);
+        long total = loadPostPort.countSearchPublished(search);
         return new Result(posts, total);
     }
 }

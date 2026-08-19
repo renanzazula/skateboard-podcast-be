@@ -36,6 +36,9 @@ class PodcastServiceTest {
     private GetPostBySlugUseCase getPostBySlugUseCase;
 
     @Mock
+    private GetPostByIdUseCase getPostByIdUseCase;
+
+    @Mock
     private UpdatePostUseCase updatePostUseCase;
 
     @Mock
@@ -70,7 +73,7 @@ class PodcastServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        service = new PodcastService(createPostUseCase, getPostUseCase, getPostBySlugUseCase,
+        service = new PodcastService(createPostUseCase, getPostUseCase, getPostBySlugUseCase, getPostByIdUseCase,
                 updatePostUseCase, deletePostUseCase, importPostsUseCase, getCategoriesUseCase,
                 getPostsByCategoryUseCase, getAdminCategoriesUseCase, updateCategoryUseCase,
                 reorderCategoriesUseCase, setDefaultCategoryUseCase,
@@ -84,9 +87,9 @@ class PodcastServiceTest {
                 Instant.parse("2026-01-01T00:00:00Z"), "http://cover.png",
                 "[{\"type\":\"text\",\"value\":\"hi\"}]",
                 "[{\"platform\":\"youtube\",\"url\":\"http://yt\"}]", createdBy);
-        when(getPostUseCase.execute(0, 10)).thenReturn(new GetPostUseCase.Result(List.of(post), 42));
+        when(getPostUseCase.execute(null, 0, 10)).thenReturn(new GetPostUseCase.Result(List.of(post), 42));
 
-        FeedPageResponse response = service.getPost(0, 10);
+        FeedPageResponse response = service.getPost(null, 0, 10);
 
         assertThat(response.getTotal()).isEqualTo(42);
         assertThat(response.getPage()).isEqualTo(0);
@@ -109,9 +112,9 @@ class PodcastServiceTest {
         Post post = Post.create("Skateboard Podcast #87", "skateboard-podcast-87", PostStatus.PUBLISHED,
                 Instant.parse("2026-01-01T00:00:00Z"), "http://thumb.jpg", "[]", "[]", null);
         post.attachYoutubeMetadata("dQw4w9WgXcQ", "Episode description", 3725, 87);
-        when(getPostUseCase.execute(0, 10)).thenReturn(new GetPostUseCase.Result(List.of(post), 1));
+        when(getPostUseCase.execute(null, 0, 10)).thenReturn(new GetPostUseCase.Result(List.of(post), 1));
 
-        PostResponse dto = service.getPost(0, 10).getPosts().get(0);
+        PostResponse dto = service.getPost(null, 0, 10).getPosts().get(0);
 
         assertThat(dto.getYoutubeVideoId()).isEqualTo("dQw4w9WgXcQ");
         assertThat(dto.getYoutubeUrl()).isEqualTo("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
@@ -130,9 +133,9 @@ class PodcastServiceTest {
         post.attachPlatformLink(new com.skateboard.podcast.domain.model.PostPlatformLink(
                 com.skateboard.podcast.domain.model.PostPlatform.SPOTIFY, "6xyz789",
                 "https://open.spotify.com/episode/6xyz789"));
-        when(getPostUseCase.execute(0, 10)).thenReturn(new GetPostUseCase.Result(List.of(post), 1));
+        when(getPostUseCase.execute(null, 0, 10)).thenReturn(new GetPostUseCase.Result(List.of(post), 1));
 
-        PostResponse dto = service.getPost(0, 10).getPosts().get(0);
+        PostResponse dto = service.getPost(null, 0, 10).getPosts().get(0);
 
         assertThat(dto.getPlatforms()).hasSize(2);
         assertThat(dto.getPlatforms())
@@ -145,9 +148,9 @@ class PodcastServiceTest {
     void getPostLeavesYoutubeFieldsNullForManuallyCreatedPosts() {
         Post post = Post.create("Manual Post", "manual-post", PostStatus.PUBLISHED,
                 null, null, "[]", "[]", null);
-        when(getPostUseCase.execute(0, 10)).thenReturn(new GetPostUseCase.Result(List.of(post), 1));
+        when(getPostUseCase.execute(null, 0, 10)).thenReturn(new GetPostUseCase.Result(List.of(post), 1));
 
-        PostResponse dto = service.getPost(0, 10).getPosts().get(0);
+        PostResponse dto = service.getPost(null, 0, 10).getPosts().get(0);
 
         assertThat(dto.getYoutubeVideoId()).isNull();
         assertThat(dto.getYoutubeUrl()).isNull();
@@ -162,6 +165,27 @@ class PodcastServiceTest {
         when(getPostBySlugUseCase.execute("missing")).thenReturn(Optional.empty());
 
         assertThat(service.getPostBySlug("missing")).isNull();
+    }
+
+    @Test
+    void getPostByIdReturnsNullWhenNotFound() {
+        UUID id = UUID.randomUUID();
+        when(getPostByIdUseCase.execute(id.toString())).thenReturn(Optional.empty());
+
+        assertThat(service.getPostById(id)).isNull();
+    }
+
+    @Test
+    void getPostByIdMapsUseCaseResultToDtoRegardlessOfStatus() {
+        UUID id = UUID.randomUUID();
+        Post post = Post.create("Draft Episode", "draft-episode", PostStatus.DRAFT,
+                null, null, "[]", "[]", null);
+        when(getPostByIdUseCase.execute(id.toString())).thenReturn(Optional.of(post));
+
+        PostResponse dto = service.getPostById(id);
+
+        assertThat(dto.getSlug()).isEqualTo("draft-episode");
+        assertThat(dto.getStatus()).isEqualTo(PostResponse.StatusEnum.DRAFT);
     }
 
     @Test

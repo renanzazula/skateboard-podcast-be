@@ -32,6 +32,7 @@ public class PodcastService {
     private final CreatePostUseCase createPostUseCase;
     private final GetPostUseCase getPostUseCase;
     private final GetPostBySlugUseCase getPostBySlugUseCase;
+    private final GetPostByIdUseCase getPostByIdUseCase;
     private final UpdatePostUseCase updatePostUseCase;
     private final DeletePostUseCase deletePostUseCase;
     private final ImportPostsUseCase importPostsUseCase;
@@ -47,6 +48,7 @@ public class PodcastService {
     public PodcastService(CreatePostUseCase createPostUseCase,
                           GetPostUseCase getPostUseCase,
                           GetPostBySlugUseCase getPostBySlugUseCase,
+                          GetPostByIdUseCase getPostByIdUseCase,
                           UpdatePostUseCase updatePostUseCase,
                           DeletePostUseCase deletePostUseCase,
                           ImportPostsUseCase importPostsUseCase,
@@ -61,6 +63,7 @@ public class PodcastService {
         this.createPostUseCase = createPostUseCase;
         this.getPostUseCase = getPostUseCase;
         this.getPostBySlugUseCase = getPostBySlugUseCase;
+        this.getPostByIdUseCase = getPostByIdUseCase;
         this.updatePostUseCase = updatePostUseCase;
         this.deletePostUseCase = deletePostUseCase;
         this.importPostsUseCase = importPostsUseCase;
@@ -76,9 +79,9 @@ public class PodcastService {
 
     // ── Reads (cached) ──────────────────────────────────────────────────────
 
-    @Cacheable(cacheNames = POST_CACHE, key = "#page + ':' + #size", sync = true)
-    public FeedPageResponse getPost(int page, int size) {
-        GetPostUseCase.Result result = getPostUseCase.execute(page, size);
+    @Cacheable(cacheNames = POST_CACHE, key = "(#search != null ? #search : '') + ':' + #page + ':' + #size", sync = true)
+    public FeedPageResponse getPost(String search, int page, int size) {
+        GetPostUseCase.Result result = getPostUseCase.execute(search, page, size);
         return new FeedPageResponse()
                 .posts(result.posts().stream()
                         .map(this::toDto)
@@ -92,6 +95,19 @@ public class PodcastService {
     @Cacheable(cacheNames = POST_CACHE, key = "#slug", unless = "#result == null")
     public PostResponse getPostBySlug(String slug) {
         return getPostBySlugUseCase.execute(slug)
+                .map(this::toDto)
+                .orElse(null);
+    }
+
+    /**
+     * Returns {@code null} when no post matches; the controller maps null to
+     * 404. Unlike {@link #getPostBySlug}, not status-filtered — used by
+     * cross-service consumers (e.g. the ui-backend Featured Player resolver)
+     * that must detect an unpublished/deleted referenced post themselves.
+     */
+    @Cacheable(cacheNames = POST_CACHE, key = "'id:' + #id", unless = "#result == null")
+    public PostResponse getPostById(UUID id) {
+        return getPostByIdUseCase.execute(id.toString())
                 .map(this::toDto)
                 .orElse(null);
     }
