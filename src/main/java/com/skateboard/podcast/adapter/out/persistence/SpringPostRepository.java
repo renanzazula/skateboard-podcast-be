@@ -15,12 +15,16 @@ public interface SpringPostRepository extends JpaRepository<PostJpaEntity, UUID>
     long countByStatus(String status);
     boolean existsBySlug(String slug);
 
+    // Ordered by publish date only — createdAt is the bulk-import timestamp and
+    // says nothing about episode order. NULLS LAST so a post still awaiting a
+    // publish date sinks to the bottom rather than jumping to the top (Postgres
+    // sorts NULLs first on DESC by default); id is the stable pagination tiebreaker.
     @Query("SELECT p FROM PostJpaEntity p WHERE p.status = :status " +
-           "ORDER BY COALESCE(p.publishAt, p.createdAt) DESC")
+           "ORDER BY p.publishAt DESC NULLS LAST, p.id")
     Page<PostJpaEntity> findByStatusOrderByEffectivePublishDate(@Param("status") String status, Pageable pageable);
 
     @Query("SELECT p FROM PostJpaEntity p WHERE p.status = :status " +
            "AND LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%')) " +
-           "ORDER BY COALESCE(p.publishAt, p.createdAt) DESC")
+           "ORDER BY p.publishAt DESC NULLS LAST, p.id")
     Page<PostJpaEntity> searchByStatusAndTitle(@Param("status") String status, @Param("query") String query, Pageable pageable);
 }

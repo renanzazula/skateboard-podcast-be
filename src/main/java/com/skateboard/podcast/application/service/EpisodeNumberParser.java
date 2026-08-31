@@ -10,8 +10,10 @@ import java.util.regex.Pattern;
  */
 public final class EpisodeNumberParser {
 
-    // Same convention FE's episodeMeta.ts uses for the show's own episode numbering.
-    private static final Pattern TRAILING_HASH_NUMBER = Pattern.compile("#(\\d+)\\s*$");
+    // Same convention FE's episodeMeta.ts uses for the show's own episode
+    // numbering. The "#" and the number are sometimes typed apart ("... # 77"),
+    // so tolerate whitespace between them.
+    private static final Pattern TRAILING_HASH_NUMBER = Pattern.compile("#\\s*(\\d+)\\s*$");
     private static final Pattern LEADING_EP_NUMBER = Pattern.compile("^\\s*ep\\.?\\s*(\\d+)\\b", Pattern.CASE_INSENSITIVE);
 
     private EpisodeNumberParser() {}

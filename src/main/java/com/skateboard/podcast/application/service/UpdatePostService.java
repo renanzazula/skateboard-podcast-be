@@ -8,6 +8,8 @@ import com.skateboard.podcast.domain.model.Post;
 import com.skateboard.podcast.domain.model.PostStatus;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
+
 @Service
 public class UpdatePostService implements UpdatePostUseCase {
 
@@ -24,7 +26,11 @@ public class UpdatePostService implements UpdatePostUseCase {
         Post post = loadPostPort.findById(input.id())
                 .orElseThrow(() -> new PostNotFoundException(input.id()));
         PostStatus status = input.status() != null ? input.status() : post.getStatus();
-        post.update(input.title(), input.slug(), status, input.publishAt(),
+        // A PUT that omits publishAt means "leave as-is" — the editor has no
+        // date field, and nulling publishAt silently re-dates the episode and
+        // reshuffles the feed (ordered by COALESCE(publishAt, createdAt)).
+        Instant publishAt = input.publishAt() != null ? input.publishAt() : post.getPublishAt();
+        post.update(input.title(), input.slug(), status, publishAt,
                 input.coverUrl(), input.blocksJson(), input.socialMediaLinksJson());
         return savePostPort.save(post);
     }

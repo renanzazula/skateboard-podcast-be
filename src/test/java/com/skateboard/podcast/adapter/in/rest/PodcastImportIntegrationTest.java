@@ -23,6 +23,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+// Also covers the full-stack create path here rather than spinning up a second
+// Testcontainers class.
+
 /**
  * End-to-end import: a real Postgres (Testcontainers) behind the full
  * persistence/Flyway stack, driven through the actual
@@ -67,6 +70,18 @@ class PodcastImportIntegrationTest {
                 .andExpect(jsonPath("$.errors").isEmpty());
 
         assertThat(postRepository.count()).isEqualTo(89);
+    }
+
+    @Test
+    void createRejectsAPostWithNoPublishDate() throws Exception {
+        mockMvc.perform(post("/api/podcast")
+                        .with(jwt()
+                                .jwt(j -> j.subject(UUID.randomUUID().toString()))
+                                .authorities(new SimpleGrantedAuthority("FUNC_PODCAST_CREATE_POST")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"No date\",\"coverUrl\":\"https://x/c.jpg\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("publishAt")));
     }
 
     private String readFixture() throws Exception {

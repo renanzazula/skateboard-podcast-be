@@ -24,11 +24,15 @@ public interface SpringPostCategoryRepository extends JpaRepository<PostCategory
            "WHERE pc.categoryId = :categoryId AND po.youtubeVideoId IS NOT NULL")
     Set<String> findYoutubeVideoIdsByCategoryId(@Param("categoryId") UUID categoryId);
 
+    // Ordered by publish date only — createdAt is the bulk-import timestamp and
+    // says nothing about episode order. NULLS LAST so a post still awaiting a
+    // publish date sinks to the bottom rather than jumping to the top; id is the
+    // stable pagination tiebreaker.
     @Query("SELECT po FROM PostJpaEntity po " +
            "JOIN PostCategoryJpaEntity pc ON pc.postId = po.id " +
            "JOIN CategoryJpaEntity c ON c.id = pc.categoryId " +
            "WHERE c.slug = :slug AND po.status = :status " +
-           "ORDER BY COALESCE(po.publishAt, po.createdAt) DESC")
+           "ORDER BY po.publishAt DESC NULLS LAST, po.id")
     Page<PostJpaEntity> findByCategorySlugAndStatus(@Param("slug") String slug, @Param("status") String status, Pageable pageable);
 
     @Query("SELECT COUNT(po) FROM PostJpaEntity po " +

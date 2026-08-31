@@ -67,8 +67,10 @@ Key conventions:
   collapse concurrent misses, and `unless = "#result == null"` on the slug lookup so 404s aren't cached. Every
   mutation (create/update/delete/import) does `@CacheEvict(allEntries = true)` — update can change the slug,
   so key-targeted eviction isn't safe.
-- `PostPersistenceAdapter.findPublished` relies on a `@Query` in `SpringPostRepository` that orders by
-  `COALESCE(publishAt, createdAt) DESC` — episodes sort by their real/effective publish date, not import time.
+- The feed `@Query`s (`SpringPostRepository`, `SpringPostCategoryRepository`) order by
+  `publishAt DESC NULLS LAST, id` — episodes sort by their real publish date; `createdAt` is the bulk-import
+  timestamp and is deliberately not a fallback. `UpdatePostService` keeps a post's `publishAt` when the
+  update request omits it, so an edit can't null the date and reshuffle the feed.
 
 ## Auth model
 

@@ -12,6 +12,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -73,5 +75,21 @@ class UpdatePostServiceTest {
         assertThatThrownBy(() -> service.execute(new UpdatePostUseCase.Input(
                 id, "Title", "title", null, null, null, "[]", "[]")))
                 .isInstanceOf(PostNotFoundException.class);
+    }
+
+    @Test
+    void omittedPublishAtKeepsTheExistingValue() {
+        Instant originalPublishAt = Instant.parse("2024-01-01T00:00:00Z");
+        Post existing = Post.reconstitute(UUID.randomUUID(), "ep-70", "Skateboard Podcast #70",
+                PostStatus.PUBLISHED, originalPublishAt, null, null, null, "[]", "[]",
+                Instant.now(), Instant.now(), UUID.randomUUID(), null, null, null, 70, List.of());
+        when(loadPostPort.findById(existing.getId().toString())).thenReturn(Optional.of(existing));
+        when(savePostPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        Post updated = service.execute(new UpdatePostUseCase.Input(
+                existing.getId().toString(), "Skateboard Podcast #70 (fixed typo)", "ep-70", null,
+                null, "cover.jpg", "[]", "[]"));
+
+        assertThat(updated.getPublishAt()).isEqualTo(originalPublishAt);
     }
 }

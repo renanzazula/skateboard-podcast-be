@@ -132,6 +132,7 @@ class MatchSpotifyEpisodeServiceTest {
     @Test
     void episodeNumberParserExtractsTrailingHashAndLeadingEp() {
         assertThat(EpisodeNumberParser.parse("Skateboard Podcast #87")).isEqualTo(87);
+        assertThat(EpisodeNumberParser.parse("Guilherme Trakinas- Skateboard Podcast # 77")).isEqualTo(77);
         assertThat(EpisodeNumberParser.parse("EP 24 Skateboarding in Barcelona")).isEqualTo(24);
         assertThat(EpisodeNumberParser.parse("No number here")).isNull();
     }
