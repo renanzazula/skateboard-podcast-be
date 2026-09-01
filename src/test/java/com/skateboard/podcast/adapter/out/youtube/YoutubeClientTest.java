@@ -72,9 +72,11 @@ class YoutubeClientTest {
         server.enqueue(new MockResponse().setBody("""
                 {"items":[
                   {"snippet":{"title":"Ep 1","description":"d1","publishedAt":"2026-01-01T00:00:00Z",
-                    "thumbnails":{"high":{"url":"http://t1"}}},"contentDetails":{"videoId":"v1"}},
+                    "thumbnails":{"high":{"url":"http://t1"}}},
+                   "contentDetails":{"videoId":"v1","videoPublishedAt":"2025-06-15T12:00:00Z"}},
                   {"snippet":{"title":"Ep 2","description":"d2","publishedAt":"2026-01-02T00:00:00Z",
-                    "thumbnails":{"maxres":{"url":"http://t2"}}},"contentDetails":{"videoId":"v2"}}
+                    "thumbnails":{"maxres":{"url":"http://t2"}}},
+                   "contentDetails":{"videoId":"v2","videoPublishedAt":"2025-07-20T09:30:00Z"}}
                 ],"nextPageToken":"page2"}
                 """).addHeader("Content-Type", "application/json"));
         server.enqueue(new MockResponse().setBody("""
@@ -88,10 +90,13 @@ class YoutubeClientTest {
 
         assertThat(videos).hasSize(3);
         assertThat(videos.get(0).videoId()).isEqualTo("v1");
-        assertThat(videos.get(0).publishedAt()).isEqualTo(Instant.parse("2026-01-01T00:00:00Z"));
+        // contentDetails.videoPublishedAt (real publish date) wins over snippet.publishedAt (playlist-add time).
+        assertThat(videos.get(0).publishedAt()).isEqualTo(Instant.parse("2025-06-15T12:00:00Z"));
         assertThat(videos.get(0).thumbnailUrl()).isEqualTo("http://t1");
         assertThat(videos.get(1).thumbnailUrl()).isEqualTo("http://t2");
         assertThat(videos.get(2).videoId()).isEqualTo("v3");
+        // No videoPublishedAt -> falls back to snippet.publishedAt.
+        assertThat(videos.get(2).publishedAt()).isEqualTo(Instant.parse("2026-01-03T00:00:00Z"));
         assertThat(videos.get(2).thumbnailUrl()).isNull();
     }
 

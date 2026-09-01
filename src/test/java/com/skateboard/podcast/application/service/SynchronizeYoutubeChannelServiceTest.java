@@ -114,6 +114,7 @@ class SynchronizeYoutubeChannelServiceTest {
         verify(createPostUseCase).execute(captor.capture());
         CreatePostUseCase.Input input = captor.getValue();
         assertThat(input.youtubeVideoId()).isEqualTo("v1");
+        assertThat(input.publishAt()).isEqualTo(Instant.parse("2026-01-01T00:00:00Z"));
         assertThat(input.description()).isEqualTo("desc v1");
         assertThat(input.durationSeconds()).isEqualTo(120);
         assertThat(input.episodeNumber()).isEqualTo(1);

@@ -96,11 +96,17 @@ public class YoutubeClient implements YoutubeContentPort {
             for (YoutubePlaylistItemsResponse.Item item : response.items()) {
                 if (item.contentDetails() == null || item.snippet() == null) continue;
                 YoutubePlaylistItemsResponse.Thumbnail thumbnail = bestThumbnail(item.snippet().thumbnails());
+                // The video's real publication time; snippet.publishedAt is only the
+                // playlist-add time. Fall back to it for private/deleted items that
+                // omit videoPublishedAt.
+                String publishedAt = item.contentDetails().videoPublishedAt() != null
+                        ? item.contentDetails().videoPublishedAt()
+                        : item.snippet().publishedAt();
                 videos.add(new YoutubeVideo(
                         item.contentDetails().videoId(),
                         item.snippet().title(),
                         item.snippet().description(),
-                        parsePublishedAt(item.snippet().publishedAt()),
+                        parsePublishedAt(publishedAt),
                         thumbnail != null ? thumbnail.url() : null,
                         thumbnail != null ? thumbnail.width() : null,
                         thumbnail != null ? thumbnail.height() : null));

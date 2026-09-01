@@ -69,7 +69,10 @@ Key conventions:
   so key-targeted eviction isn't safe.
 - The feed `@Query`s (`SpringPostRepository`, `SpringPostCategoryRepository`) order by
   `publishAt DESC NULLS LAST, id` — episodes sort by their real publish date; `createdAt` is the bulk-import
-  timestamp and is deliberately not a fallback. `UpdatePostService` keeps a post's `publishAt` when the
+  timestamp and is deliberately not a fallback. The YouTube sync sources `publishAt` from each item's
+  `contentDetails.videoPublishedAt` (the video's actual publication time), not the playlistItem's
+  `snippet.publishedAt` (which is only when the video was added to the playlist), falling back to the latter
+  only when `videoPublishedAt` is absent. `UpdatePostService` keeps a post's `publishAt` when the
   update request omits it, so an edit can't null the date and reshuffle the feed.
 
 ## Auth model

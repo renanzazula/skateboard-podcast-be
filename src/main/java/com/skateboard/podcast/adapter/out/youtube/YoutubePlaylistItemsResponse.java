@@ -19,6 +19,9 @@ record YoutubePlaylistItemsResponse(List<Item> items, String nextPageToken) {
     @JsonIgnoreProperties(ignoreUnknown = true)
     record Thumbnail(String url, Integer width, Integer height) {}
 
+    // videoPublishedAt is the video's actual publication time (copied from the
+    // video resource); snippet.publishedAt on a playlistItem is only when the
+    // item was added to the playlist, so it must not be used as the publish date.
     @JsonIgnoreProperties(ignoreUnknown = true)
-    record ContentDetails(String videoId) {}
+    record ContentDetails(String videoId, String videoPublishedAt) {}
 }

@@ -12,6 +12,7 @@ public interface YoutubeContentPort {
 
     record YoutubeChannel(String channelId, String title, String uploadsPlaylistId) {}
 
+    /** {@code publishedAt} is the video's actual publication time, not the time it was added to a playlist. */
     record YoutubeVideo(String videoId, String title, String description, Instant publishedAt,
                         String thumbnailUrl, Integer thumbnailWidth, Integer thumbnailHeight) {
 
