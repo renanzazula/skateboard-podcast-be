@@ -63,6 +63,9 @@ public class PostJpaEntity {
     @Column(name = "episode_number")
     private Integer episodeNumber;
 
+    @Column(name = "notified_at")
+    private Instant notifiedAt;
+
     public PostJpaEntity() {}
 
     public UUID getId()          { return id; }
@@ -82,6 +85,7 @@ public class PostJpaEntity {
     public String getDescription()     { return description; }
     public Integer getDurationSeconds(){ return durationSeconds; }
     public Integer getEpisodeNumber()  { return episodeNumber; }
+    public Instant getNotifiedAt()     { return notifiedAt; }
 
     public void setId(UUID id)              { this.id = id; }
     public void setSlug(String slug)        { this.slug = slug; }
@@ -100,4 +104,5 @@ public class PostJpaEntity {
     public void setDescription(String v)      { this.description = v; }
     public void setDurationSeconds(Integer v) { this.durationSeconds = v; }
     public void setEpisodeNumber(Integer v)   { this.episodeNumber = v; }
+    public void setNotifiedAt(Instant v)      { this.notifiedAt = v; }
 }

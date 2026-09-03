@@ -27,6 +27,11 @@ public class Post {
     private String description;
     private Integer durationSeconds;
     private Integer episodeNumber;
+    // When a PODCAST_PUBLISHED event was successfully emitted for this post.
+    // Null means "owed": the reconciliation job re-emits for recent published
+    // posts that still have no timestamp, and a set value is what stops an
+    // edit, a re-sync or a job replay from notifying twice.
+    private Instant notifiedAt;
     private final List<PostPlatformLink> platformLinks;
 
     private Post(UUID id, String slug, String title, PostStatus status, Instant publishAt,
@@ -34,7 +39,7 @@ public class Post {
                  String blocksJson, String socialMediaLinksJson,
                  Instant createdAt, Instant updatedAt, UUID createdBy,
                  String youtubeVideoId, String description, Integer durationSeconds, Integer episodeNumber,
-                 List<PostPlatformLink> platformLinks) {
+                 Instant notifiedAt, List<PostPlatformLink> platformLinks) {
         this.id = id;
         this.slug = slug;
         this.title = title;
@@ -52,6 +57,7 @@ public class Post {
         this.description = description;
         this.durationSeconds = durationSeconds;
         this.episodeNumber = episodeNumber;
+        this.notifiedAt = notifiedAt;
         this.platformLinks = platformLinks != null ? new ArrayList<>(platformLinks) : new ArrayList<>();
     }
 
@@ -60,7 +66,7 @@ public class Post {
         Instant now = Instant.now();
         return new Post(UUID.randomUUID(), slug, title, status, publishAt, coverUrl, null, null, blocksJson,
                 socialMediaLinksJson != null ? socialMediaLinksJson : "[]", now, now, createdBy,
-                null, null, null, null, null);
+                null, null, null, null, null, null);
     }
 
     public static Post reconstitute(UUID id, String slug, String title, PostStatus status, Instant publishAt,
@@ -68,10 +74,10 @@ public class Post {
                                     String blocksJson, String socialMediaLinksJson,
                                     Instant createdAt, Instant updatedAt, UUID createdBy,
                                     String youtubeVideoId, String description, Integer durationSeconds, Integer episodeNumber,
-                                    List<PostPlatformLink> platformLinks) {
+                                    Instant notifiedAt, List<PostPlatformLink> platformLinks) {
         return new Post(id, slug, title, status, publishAt, coverUrl, coverWidth, coverHeight, blocksJson,
                 socialMediaLinksJson != null ? socialMediaLinksJson : "[]", createdAt, updatedAt, createdBy,
-                youtubeVideoId, description, durationSeconds, episodeNumber, platformLinks);
+                youtubeVideoId, description, durationSeconds, episodeNumber, notifiedAt, platformLinks);
     }
 
     public void update(String title, String slug, PostStatus status, Instant publishAt,
@@ -100,6 +106,15 @@ public class Post {
         this.coverHeight = coverHeight;
     }
 
+    /**
+     * Records that subscribers have been told about this post. Called only
+     * after the event was actually accepted by the broker, so a publish that
+     * failed leaves this null and stays owed.
+     */
+    public void markNotified() {
+        this.notifiedAt = Instant.now();
+    }
+
     /** Sync-only: attaches/replaces this episode's link for {@code link.platform()} — at most one link per platform. */
     public void attachPlatformLink(PostPlatformLink link) {
         platformLinks.removeIf(existing -> existing.platform() == link.platform());
@@ -107,6 +122,7 @@ public class Post {
     }
 
     public UUID getId()                        { return id; }
+    public Instant getNotifiedAt()             { return notifiedAt; }
     public String getSlug()                    { return slug; }
     public String getTitle()                   { return title; }
     public PostStatus getStatus()              { return status; }

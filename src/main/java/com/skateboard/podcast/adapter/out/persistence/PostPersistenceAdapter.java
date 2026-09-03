@@ -115,6 +115,14 @@ public class PostPersistenceAdapter implements LoadPostPort, SavePostPort {
         return jpaRepository.existsBySlug(slug);
     }
 
+    @Override
+    public List<Post> findPublishedAwaitingNotification(Instant publishedAfter, int limit) {
+        return toDomainWithLinks(jpaRepository
+                .findAwaitingNotification(PostStatus.PUBLISHED.name(), publishedAfter,
+                        PageRequest.of(0, limit))
+                .getContent());
+    }
+
     // Batches the platform-link lookup into one query per page instead of one per post.
     private List<Post> toDomainWithLinks(List<PostJpaEntity> entities) {
         List<UUID> ids = entities.stream().map(PostJpaEntity::getId).toList();
@@ -163,7 +171,7 @@ public class PostPersistenceAdapter implements LoadPostPort, SavePostPort {
                 e.getSocialMediaLinksJson(),
                 e.getCreatedAt(), e.getUpdatedAt(), e.getCreatedBy(),
                 e.getYoutubeVideoId(), e.getDescription(), e.getDurationSeconds(), e.getEpisodeNumber(),
-                platformLinks
+                e.getNotifiedAt(), platformLinks
         );
     }
 
@@ -186,6 +194,7 @@ public class PostPersistenceAdapter implements LoadPostPort, SavePostPort {
         e.setDescription(post.getDescription());
         e.setDurationSeconds(post.getDurationSeconds());
         e.setEpisodeNumber(post.getEpisodeNumber());
+        e.setNotifiedAt(post.getNotifiedAt());
         return e;
     }
 }

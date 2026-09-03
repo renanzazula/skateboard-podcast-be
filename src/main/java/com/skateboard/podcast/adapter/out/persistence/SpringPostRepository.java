@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -27,4 +29,15 @@ public interface SpringPostRepository extends JpaRepository<PostJpaEntity, UUID>
            "AND LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%')) " +
            "ORDER BY p.publishAt DESC NULLS LAST, p.id")
     Page<PostJpaEntity> searchByStatusAndTitle(@Param("status") String status, @Param("query") String query, Pageable pageable);
+
+    // Posts that were published but whose PODCAST_PUBLISHED event never reached
+    // the broker. Bounded by publishAt as well as by notified_at so the query
+    // can never widen into the back catalogue, whatever ends up in the column.
+    // Oldest first, so a backlog is announced in the order it happened.
+    @Query("SELECT p FROM PostJpaEntity p WHERE p.status = :status " +
+           "AND p.notifiedAt IS NULL AND p.publishAt IS NOT NULL AND p.publishAt > :publishedAfter " +
+           "ORDER BY p.publishAt, p.id")
+    Page<PostJpaEntity> findAwaitingNotification(@Param("status") String status,
+                                                  @Param("publishedAfter") Instant publishedAfter,
+                                                  Pageable pageable);
 }

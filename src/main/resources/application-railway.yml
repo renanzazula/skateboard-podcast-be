@@ -37,6 +37,16 @@ spring:
       repositories:
         enabled: false
 
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: ${SPRING_RABBITMQ_PORT:5672}
+    username: ${SPRING_RABBITMQ_USERNAME:guest}
+    password: ${SPRING_RABBITMQ_PASSWORD:guest}
+    # Needed for RabbitDomainEventPublisher's waitForConfirms. Without confirms
+    # a send the broker never accepted still looks successful, and the post
+    # would be marked notified for an event nobody received.
+    publisher-confirm-type: simple
+
   security:
     oauth2:
       resourceserver:
@@ -82,6 +92,24 @@ spotify:
     # Rides along on youtube.sync's cron cycle (PodcastService.triggerSync) —
     # this only gates whether that pass also runs the Spotify enrichment step.
     enabled: ${SPOTIFY_SYNC_ENABLED:false}
+
+podcast:
+  notifications:
+    # Off by default so a deployment is silent until someone deliberately turns
+    # it on — the same posture the magazine plan takes with its no-op adapter.
+    enabled: ${PODCAST_NOTIFICATIONS_ENABLED:false}
+    # How recent an episode's publishAt must be for it to be worth announcing.
+    # This is the back-catalogue guard: the YouTube sync creates PUBLISHED posts
+    # carrying each video's real publication date, so without a window the first
+    # run against an existing channel would notify about every episode ever made.
+    max-age-hours: ${PODCAST_NOTIFICATIONS_MAX_AGE_HOURS:48}
+    # Every user shares this tenant today; this service has no other source for
+    # it. Same property shape skateboard-user-be uses.
+    tenant-id: ${APP_TENANCY_DEFAULT_TENANT_ID:00000000-0000-0000-0000-000000000001}
+    # Recovery pass for posts saved but never announced (see
+    # PendingPodcastNotificationJob). Frequent enough that a broker blip costs
+    # minutes, not a release.
+    cron: ${PODCAST_NOTIFICATIONS_CRON:0 */5 * * * *}
 
 logging:
   pattern:

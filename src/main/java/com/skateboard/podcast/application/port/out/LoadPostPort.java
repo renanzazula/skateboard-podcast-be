@@ -16,4 +16,14 @@ public interface LoadPostPort {
     List<Post> findAll(int page, int size);
     long countAll();
     boolean existsBySlug(String slug);
+
+    /**
+     * Published posts that were never successfully announced and are still
+     * recent enough to be worth announcing.
+     *
+     * <p>This is the outbox, using the posts table itself: a post that was
+     * saved but whose event never reached the broker is exactly a row with
+     * {@code notified_at IS NULL}, so no second table is needed to find it.
+     */
+    List<Post> findPublishedAwaitingNotification(java.time.Instant publishedAfter, int limit);
 }

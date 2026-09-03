@@ -13,10 +13,13 @@ public class CreatePostService implements CreatePostUseCase {
 
     private final LoadPostPort loadPostPort;
     private final SavePostPort savePostPort;
+    private final PodcastPublicationNotifier publicationNotifier;
 
-    public CreatePostService(LoadPostPort loadPostPort, SavePostPort savePostPort) {
+    public CreatePostService(LoadPostPort loadPostPort, SavePostPort savePostPort,
+                             PodcastPublicationNotifier publicationNotifier) {
         this.loadPostPort = loadPostPort;
         this.savePostPort = savePostPort;
+        this.publicationNotifier = publicationNotifier;
     }
 
     @Override
@@ -31,7 +34,13 @@ public class CreatePostService implements CreatePostUseCase {
             post.attachPlatformLink(new PostPlatformLink(PostPlatform.YOUTUBE, input.youtubeVideoId(),
                     "https://www.youtube.com/watch?v=" + input.youtubeVideoId()));
         }
-        return savePostPort.save(post);
+        Post saved = savePostPort.save(post);
+        // Every create path funnels through here — manual authoring, the JSON
+        // import and the YouTube sync — so this is the one place that has to
+        // announce a new episode. The notifier decides whether it qualifies;
+        // the back catalogue the sync ingests does not.
+        publicationNotifier.notifyIfNewlyPublished(saved);
+        return saved;
     }
 
     private String ensureUniqueSlug(String base) {
