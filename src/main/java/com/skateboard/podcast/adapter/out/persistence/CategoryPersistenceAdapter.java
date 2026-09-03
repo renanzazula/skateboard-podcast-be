@@ -152,7 +152,7 @@ public class CategoryPersistenceAdapter implements CategoryRepositoryPort, PostC
                 e.getSocialMediaLinksJson(),
                 e.getCreatedAt(), e.getUpdatedAt(), e.getCreatedBy(),
                 e.getYoutubeVideoId(), e.getDescription(), e.getDurationSeconds(), e.getEpisodeNumber(),
-                platformLinks
+                e.getNotifiedAt(), platformLinks
         );
     }
 

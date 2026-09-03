@@ -75,6 +75,40 @@ Key conventions:
   only when `videoPublishedAt` is absent. `UpdatePostService` keeps a post's `publishAt` when the
   update request omits it, so an edit can't null the date and reshuffle the feed.
 
+## Publishing a podcast notifies subscribers
+
+`skateboard-notification-be` owns push notifications; this service only states that a podcast was
+published. It emits `PODCAST_PUBLISHED` to the shared `application.events` topic exchange with routing
+key `podcast.published.v1`, and knows nothing about devices, preferences, Expo or retries.
+
+`PodcastPublicationNotifier` is the single decision point, called from `CreatePostService` (which every
+create path funnels through — manual authoring, JSON import and the YouTube sync) and from
+`UpdatePostService` on a genuine non-PUBLISHED → PUBLISHED transition. Three gates, each guarding a
+specific failure:
+
+- **`podcast.notifications.enabled`** — false by default, so a deployment is silent until someone turns
+  it on deliberately.
+- **`posts.notified_at`** — set only after the broker *confirmed* the event. An edit of a published post,
+  a re-sync or a replayed job cannot notify twice.
+- **`podcast.notifications.max-age-hours`** (48) — the back-catalogue guard. `SynchronizeYoutubeChannelService`
+  hard-codes `PostStatus.PUBLISHED` and uses each video's *real* publication date, so without a recency
+  window the first sync against an established channel would push the entire archive. `V7` backfills
+  existing rows to `now()` for the same reason.
+
+**The event id is derived from the post id** (`UUID.nameUUIDFromBytes("PODCAST_PUBLISHED:" + id)`), not
+random. Two things can emit for one post — the inline call and `PendingPodcastNotificationJob` — and the
+stable id is what lets the consumer's idempotency ledger collapse them. Do not make it random.
+
+`PendingPodcastNotificationJob` (`@Scheduled` + `@SchedulerLock`, like `YoutubeSyncJob`) is the
+transactional outbox without an outbox table: a post saved but never announced *is* a row with
+`notified_at IS NULL`, so recovery is a query. It runs every five minutes and is bounded to 20 posts a
+pass.
+
+Publisher confirms (`spring.rabbitmq.publisher-confirm-type: simple`) are required for that to mean
+anything — without them a send the broker never accepted looks successful and the post is marked
+notified for an event nobody received. A confirm still only says the broker took the message, not that a
+queue was bound to receive it.
+
 ## Auth model
 
 `infrastructure/security/SecurityConfig` is an OAuth2 resource server validating access tokens issued by the

@@ -132,6 +132,14 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
+
+        <!-- Publishes domain events to the shared application.events exchange.
+             This service is a producer only: it declares the exchange and never
+             the queues bound to it, so it stays unaware of who consumes. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-amqp</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
