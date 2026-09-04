@@ -106,8 +106,20 @@ public class PostPersistenceAdapter implements LoadPostPort, SavePostPort {
     }
 
     @Override
+    @Transactional
     public void deleteById(String id) {
-        jpaRepository.deleteById(UUID.fromString(id));
+        UUID postId = UUID.fromString(id);
+        // A post owns its platform links, and deleting one has to take them
+        // with it. They are not a mapped association — save() manages them
+        // through their own repository — so nothing removes them unless this
+        // does, and post_platform_link.post_id is a NOT NULL foreign key:
+        // leaving the rows behind does not orphan them, it makes the delete
+        // fail outright.
+        //
+        // Both statements are in one transaction, so a post is never left
+        // without the links that describe where it is published.
+        platformLinkRepository.deleteByPostId(postId);
+        jpaRepository.deleteById(postId);
     }
 
     @Override

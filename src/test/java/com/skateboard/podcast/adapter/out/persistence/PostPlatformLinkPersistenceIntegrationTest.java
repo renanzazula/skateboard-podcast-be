@@ -84,4 +84,41 @@ class PostPlatformLinkPersistenceIntegrationTest {
         assertThat(reReloaded.getPlatformLinks()).singleElement()
                 .satisfies(link -> assertThat(link.externalId()).isEqualTo("sp-new"));
     }
+
+    /**
+     * Deleting an episode that has platform links used to fail with
+     * post_platform_link_post_id_fkey — the admin screen surfaced it as
+     * "Podcast service is currently unavailable", since the BFF maps a 500 to
+     * an outage. Every synced episode has a YouTube link, so this was every
+     * delete that mattered.
+     *
+     * <p>The link rows must be gone too, not merely detached: their
+     * (platform, external_id) pair is UNIQUE, so a leftover row would keep the
+     * video id claimed and block re-importing that episode — which is what the
+     * re-import at the end of this test checks.
+     */
+    @Test
+    void deletingAPostRemovesItsPlatformLinks() {
+        Post post = Post.create("EP 26 Skateboarding", "ep-26-skateboarding-" + UUID.randomUUID(),
+                PostStatus.PUBLISHED, null, null, "[]", "[]", null);
+        String externalId = "yt-26-" + UUID.randomUUID();
+        post.attachPlatformLink(new PostPlatformLink(PostPlatform.YOUTUBE, externalId,
+                "https://www.youtube.com/watch?v=" + externalId));
+        Post saved = savePostPort.save(post);
+        UUID postId = saved.getId();
+        assertThat(platformLinkRepository.findByPostId(postId)).hasSize(1);
+
+        savePostPort.deleteById(postId.toString());
+
+        assertThat(loadPostPort.findById(postId.toString())).isEmpty();
+        assertThat(platformLinkRepository.findByPostId(postId)).isEmpty();
+
+        // The external id is free again, which the unique constraint would not
+        // allow if the link row had survived.
+        Post reimported = Post.create("EP 26 Skateboarding", "ep-26-reimported-" + UUID.randomUUID(),
+                PostStatus.PUBLISHED, null, null, "[]", "[]", null);
+        reimported.attachPlatformLink(new PostPlatformLink(PostPlatform.YOUTUBE, externalId,
+                "https://www.youtube.com/watch?v=" + externalId));
+        assertThat(savePostPort.save(reimported).getId()).isNotNull();
+    }
 }
