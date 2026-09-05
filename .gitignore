@@ -31,3 +31,6 @@ target/
 
 *.iml
 .docs
+
+# New Relic agent, downloaded during the Railway build step (see newrelic-config/)
+newrelic/

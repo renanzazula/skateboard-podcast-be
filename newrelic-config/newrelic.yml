@@ -1,0 +1,49 @@
+common: &default_settings
+  license_key: <%= ENV["NEW_RELIC_LICENSE_KEY"] %>
+  agent_enabled: <%= ENV["NEW_RELIC_ENABLED"] || "false" %>
+  app_name: <%= ENV["NEW_RELIC_APP_NAME"] || "skateboard-podcast-be" %>
+  labels: environment:<%= ENV["NEW_RELIC_ENVIRONMENT"] || "development" %>
+
+  distributed_tracing:
+    enabled: true
+
+  application_logging:
+    forwarding:
+      enabled: false
+
+  attributes:
+    exclude:
+      - request.headers.authorization
+      - request.headers.Authorization
+      - request.headers.cookie
+      - request.headers.set-cookie
+      - request.headers.x-api-key
+      - request.parameters.*token*
+      - request.parameters.*secret*
+      - request.parameters.*password*
+      - request.parameters.*key*
+
+  transaction_tracer:
+    enabled: true
+    record_sql: obfuscated
+
+  error_collector:
+    enabled: true
+    attributes:
+      exclude:
+        - request.headers.authorization
+        - request.headers.cookie
+
+  browser_monitoring:
+    auto_instrument: false
+
+  security:
+    agent:
+      enabled: false
+
+production:
+  <<: *default_settings
+staging:
+  <<: *default_settings
+development:
+  <<: *default_settings
