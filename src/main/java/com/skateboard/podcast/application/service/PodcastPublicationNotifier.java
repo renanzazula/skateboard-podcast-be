@@ -34,10 +34,15 @@ import java.util.UUID;
  *       catalogue.</li>
  * </ul>
  *
- * <p>The event id is derived from the post id rather than random. Two things
- * can emit for the same post — the inline call at publish time and the
- * reconciliation job — and a stable id is what lets the consumer recognise the
- * second one as a duplicate instead of sending twice.
+ * <p>Only PendingPodcastNotificationJob calls this. Creating or updating a post
+ * deliberately does not: a PUBLISHED post with no {@code notifiedAt} already
+ * records that an announcement is owed, so the job needs no prompting and the
+ * broker stays out of the admin's request.
+ *
+ * <p>The event id is derived from the post id rather than random. A pass that
+ * emitted an event but died before {@code notifiedAt} was committed will emit
+ * again on the next run, and a stable id is what lets the consumer recognise
+ * that as a duplicate instead of sending twice.
  */
 @Service
 public class PodcastPublicationNotifier {

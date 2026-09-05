@@ -8,18 +8,25 @@ import com.skateboard.podcast.domain.model.PostPlatform;
 import com.skateboard.podcast.domain.model.PostPlatformLink;
 import org.springframework.stereotype.Service;
 
+/**
+ * Creating a post does not announce it. A saved post that is PUBLISHED, recent
+ * and carries no {@code notifiedAt} <em>is</em> the record that an announcement
+ * is owed, and PendingPodcastNotificationJob is the single thing that acts on
+ * it — see PodcastPublicationNotifier.
+ *
+ * <p>That keeps the broker out of this request entirely: creating an episode is
+ * a database write, so RabbitMQ being down delays a notification instead of
+ * putting a remote call in the admin's path.
+ */
 @Service
 public class CreatePostService implements CreatePostUseCase {
 
     private final LoadPostPort loadPostPort;
     private final SavePostPort savePostPort;
-    private final PodcastPublicationNotifier publicationNotifier;
 
-    public CreatePostService(LoadPostPort loadPostPort, SavePostPort savePostPort,
-                             PodcastPublicationNotifier publicationNotifier) {
+    public CreatePostService(LoadPostPort loadPostPort, SavePostPort savePostPort) {
         this.loadPostPort = loadPostPort;
         this.savePostPort = savePostPort;
-        this.publicationNotifier = publicationNotifier;
     }
 
     @Override
@@ -34,13 +41,7 @@ public class CreatePostService implements CreatePostUseCase {
             post.attachPlatformLink(new PostPlatformLink(PostPlatform.YOUTUBE, input.youtubeVideoId(),
                     "https://www.youtube.com/watch?v=" + input.youtubeVideoId()));
         }
-        Post saved = savePostPort.save(post);
-        // Every create path funnels through here — manual authoring, the JSON
-        // import and the YouTube sync — so this is the one place that has to
-        // announce a new episode. The notifier decides whether it qualifies;
-        // the back catalogue the sync ingests does not.
-        publicationNotifier.notifyIfNewlyPublished(saved);
-        return saved;
+        return savePostPort.save(post);
     }
 
     private String ensureUniqueSlug(String base) {

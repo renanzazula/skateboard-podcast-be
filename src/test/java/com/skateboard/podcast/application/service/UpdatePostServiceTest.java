@@ -8,7 +8,6 @@ import com.skateboard.podcast.domain.model.Post;
 import com.skateboard.podcast.domain.model.PostStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -20,8 +19,6 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class UpdatePostServiceTest {
@@ -32,15 +29,12 @@ class UpdatePostServiceTest {
     @Mock
     private SavePostPort savePostPort;
 
-    @Mock
-    private PodcastPublicationNotifier publicationNotifier;
-
     private UpdatePostService service;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        service = new UpdatePostService(loadPostPort, savePostPort, publicationNotifier);
+        service = new UpdatePostService(loadPostPort, savePostPort);
     }
 
     @Test
@@ -96,37 +90,5 @@ class UpdatePostServiceTest {
                 null, "cover.jpg", "[]", "[]"));
 
         assertThat(updated.getPublishAt()).isEqualTo(originalPublishAt);
-    }
-
-    /**
-     * Publishing a draft is news; editing something already published is not.
-     * The service has to compare the status before and after to tell them
-     * apart, which it did not do before notifications existed.
-     */
-    @Test
-    void publishingADraftAnnouncesIt() {
-        Post existing = Post.create("Draft Episode", "draft-episode", PostStatus.DRAFT,
-                Instant.now(), "cover.jpg", "[]", "[]", UUID.randomUUID());
-        when(loadPostPort.findById(existing.getId().toString())).thenReturn(Optional.of(existing));
-        when(savePostPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
-
-        service.execute(new UpdatePostUseCase.Input(existing.getId().toString(), "Episode", "episode",
-                PostStatus.PUBLISHED, Instant.now(), "cover.jpg", "[]", "[]"));
-
-        verify(publicationNotifier).notifyIfNewlyPublished(existing);
-    }
-
-    @Test
-    void editingAnAlreadyPublishedPostAnnouncesNothing() {
-        Post existing = Post.create("Episode", "episode", PostStatus.PUBLISHED,
-                Instant.now(), "cover.jpg", "[]", "[]", UUID.randomUUID());
-        when(loadPostPort.findById(existing.getId().toString())).thenReturn(Optional.of(existing));
-        when(savePostPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
-
-        service.execute(new UpdatePostUseCase.Input(existing.getId().toString(),
-                "Episode (fixed typo)", "episode", PostStatus.PUBLISHED, Instant.now(),
-                "cover.jpg", "[]", "[]"));
-
-        verifyNoInteractions(publicationNotifier);
     }
 }

@@ -16,19 +16,26 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * Re-emits PODCAST_PUBLISHED for posts that were published but never
- * successfully announced.
+ * Emits PODCAST_PUBLISHED for posts that are published but not yet announced.
+ * This is the <em>only</em> thing that announces an episode — every route into
+ * the feed (the admin screen, the JSON import, the YouTube sync) just leaves a
+ * row for it to find.
  *
- * <p>This is the transactional outbox, without an outbox table. A post is
- * saved and then an event is published; if the second step fails — the broker
- * is down, the network blips, the process dies in between — the podcast exists
- * and nobody is ever told. The posts table already records exactly that state
- * as {@code notified_at IS NULL}, so the recovery is a query rather than a
- * second table to keep consistent.
+ * <p>This is the transactional outbox, without an outbox table. Announcing
+ * from the request that saved the post would put a broker call in the admin's
+ * path, and would still need this job for the case where that call fails. The
+ * posts table already records what is owed as {@code notified_at IS NULL}, so
+ * one query covers both, and creating a post stays a database write that
+ * cannot be broken by RabbitMQ being down.
+ *
+ * <p>The cost is latency: an episode is announced on the next pass rather than
+ * the instant it is saved, which for "a new podcast is out" is not a deadline
+ * worth complicating the write path for.
  *
  * <p>Safe to run repeatedly because the event id is derived from the post id:
- * a re-emission of something that did get through carries the same id, and
- * skateboard-notification-be's idempotency ledger drops it.
+ * a pass that emitted but died before committing {@code notifiedAt} emits the
+ * same id next time, and skateboard-notification-be's idempotency ledger drops
+ * it.
  *
  * <p>ShedLock, like {@link YoutubeSyncJob}, so multiple instances do not each
  * announce the same backlog.

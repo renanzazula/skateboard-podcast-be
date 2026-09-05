@@ -81,28 +81,38 @@ Key conventions:
 published. It emits `PODCAST_PUBLISHED` to the shared `application.events` topic exchange with routing
 key `podcast.published.v1`, and knows nothing about devices, preferences, Expo or retries.
 
-`PodcastPublicationNotifier` is the single decision point, called from `CreatePostService` (which every
-create path funnels through — manual authoring, JSON import and the YouTube sync) and from
-`UpdatePostService` on a genuine non-PUBLISHED → PUBLISHED transition. Three gates, each guarding a
-specific failure:
+**Nothing announces an episode from the request that saved it.** `CreatePostService` and
+`UpdatePostService` know nothing about notifications: they save a post, and a PUBLISHED post with
+`notified_at IS NULL` *is* the record that an announcement is owed. `PendingPodcastNotificationJob` is
+the only caller of `PodcastPublicationNotifier`. That keeps RabbitMQ out of the admin's request — a
+broker outage delays a notification instead of putting a remote call in the write path — and it removes
+the need for `UpdatePostService` to compare the old and new status: an edit of a live episode already
+has `notified_at` set, so the job passes over it, while a draft going live does not, so the job picks it
+up. The cost is up to one cron interval of latency, which "a new podcast is out" can afford.
+
+`PodcastPublicationNotifier` is the single decision point. Three gates, each guarding a specific
+failure:
 
 - **`podcast.notifications.enabled`** — false by default, so a deployment is silent until someone turns
   it on deliberately.
 - **`posts.notified_at`** — set only after the broker *confirmed* the event. An edit of a published post,
-  a re-sync or a replayed job cannot notify twice.
+  a re-sync or a replayed job cannot notify twice. It is also what the job queries on, so it is the
+  whole trigger mechanism, not just a guard.
 - **`podcast.notifications.max-age-hours`** (48) — the back-catalogue guard. `SynchronizeYoutubeChannelService`
   hard-codes `PostStatus.PUBLISHED` and uses each video's *real* publication date, so without a recency
   window the first sync against an established channel would push the entire archive. `V7` backfills
   existing rows to `now()` for the same reason.
 
 **The event id is derived from the post id** (`UUID.nameUUIDFromBytes("PODCAST_PUBLISHED:" + id)`), not
-random. Two things can emit for one post — the inline call and `PendingPodcastNotificationJob` — and the
-stable id is what lets the consumer's idempotency ledger collapse them. Do not make it random.
+random. A pass that emitted an event but died before committing `notified_at` emits the same id next
+time, and that is what lets the consumer's idempotency ledger collapse the two. Do not make it random.
+Note it does *not* collapse two posts for one episode — that is a different bug, fixed by not creating
+the duplicate.
 
 `PendingPodcastNotificationJob` (`@Scheduled` + `@SchedulerLock`, like `YoutubeSyncJob`) is the
 transactional outbox without an outbox table: a post saved but never announced *is* a row with
-`notified_at IS NULL`, so recovery is a query. It runs every five minutes and is bounded to 20 posts a
-pass.
+`notified_at IS NULL`, so both the trigger and the recovery are one query. It runs every five minutes and
+is bounded to 20 posts a pass.
 
 Publisher confirms (`spring.rabbitmq.publisher-confirm-type: simple`) are required for that to mean
 anything — without them a send the broker never accepted looks successful and the post is marked

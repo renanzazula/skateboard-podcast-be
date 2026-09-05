@@ -4,6 +4,8 @@ import com.skateboard.podcast.application.port.in.CreatePostUseCase;
 import com.skateboard.podcast.application.port.out.LoadPostPort;
 import com.skateboard.podcast.application.port.out.SavePostPort;
 import com.skateboard.podcast.domain.model.Post;
+import com.skateboard.podcast.domain.model.PostPlatform;
+import com.skateboard.podcast.domain.model.PostPlatformLink;
 import com.skateboard.podcast.domain.model.PostStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,13 +23,12 @@ import static org.mockito.Mockito.when;
 
 /**
  * Every create path funnels through this service — the admin screen, the JSON
- * import and the YouTube sync — so this is where "publishing an episode tells
- * subscribers about it" is either wired up or silently lost.
+ * import and the YouTube sync.
  *
- * <p>Whether a given post actually qualifies is
- * {@link PodcastPublicationNotifier}'s decision and is covered by its own
- * test. What matters here is that the notifier is consulted at all, and that it
- * is handed the <em>saved</em> post rather than the caller's input.
+ * <p>Announcing is deliberately not one of its jobs: it saves a post and stops,
+ * leaving PendingPodcastNotificationJob to find what is owed. What it does owe
+ * that job is a post whose stored state is right, which is what these cases
+ * pin down.
  */
 class CreatePostServiceTest {
 
@@ -37,81 +38,79 @@ class CreatePostServiceTest {
     @Mock
     private SavePostPort savePostPort;
 
-    @Mock
-    private PodcastPublicationNotifier publicationNotifier;
-
     private CreatePostService service;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        service = new CreatePostService(loadPostPort, savePostPort, publicationNotifier);
+        service = new CreatePostService(loadPostPort, savePostPort);
         when(savePostPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
     }
 
-    /**
-     * The admin screen's default: the form posts status PUBLISHED with
-     * publishAt set to now, so creating an episode there has to announce it.
-     */
-    @Test
-    void creatingAPublishedEpisodeAnnouncesIt() {
-        service.execute(new CreatePostUseCase.Input("Episode 42", "episode-42",
-                PostStatus.PUBLISHED, Instant.now(), "cover.jpg", "[]", "[]", UUID.randomUUID()));
-
-        verify(publicationNotifier).notifyIfNewlyPublished(any(Post.class));
-    }
-
-    /**
-     * The notifier reads the post's id, slug and publishAt to build the event,
-     * and writes notifiedAt back through the repository. Handing it anything
-     * other than what was saved would emit an event pointing at a post that
-     * does not exist under that identity.
-     */
-    @Test
-    void announcesTheSavedPostNotTheInput() {
-        service.execute(new CreatePostUseCase.Input("Episode 43", "episode-43",
-                PostStatus.PUBLISHED, Instant.now(), "cover.jpg", "[]", "[]", UUID.randomUUID()));
-
+    private Post created(CreatePostUseCase.Input input) {
+        service.execute(input);
         ArgumentCaptor<Post> saved = ArgumentCaptor.forClass(Post.class);
         verify(savePostPort).save(saved.capture());
-        ArgumentCaptor<Post> announced = ArgumentCaptor.forClass(Post.class);
-        verify(publicationNotifier).notifyIfNewlyPublished(announced.capture());
-
-        assertThat(announced.getValue()).isSameAs(saved.getValue());
+        return saved.getValue();
     }
 
     /**
-     * A draft is not news. The notifier gates on this itself, but the slug
-     * uniqueness loop and the notifier call sit in the same method, so a
-     * refactor that reorders them would be caught here rather than by someone
-     * receiving a push for an unfinished episode.
+     * The admin screen's default: the form posts PUBLISHED with publishAt set
+     * to now. Saved with no notifiedAt, that row is exactly what the job reads
+     * as "this episode is owed an announcement".
      */
     @Test
-    void creatingADraftAnnouncesNothingWorthSending() {
-        service.execute(new CreatePostUseCase.Input("Half-written", "half-written",
-                PostStatus.DRAFT, null, null, "[]", "[]", UUID.randomUUID()));
+    void aPublishedEpisodeIsSavedOwingAnAnnouncement() {
+        Post post = created(new CreatePostUseCase.Input("Episode 42", "episode-42",
+                PostStatus.PUBLISHED, Instant.now(), "cover.jpg", "[]", "[]", UUID.randomUUID()));
 
-        ArgumentCaptor<Post> announced = ArgumentCaptor.forClass(Post.class);
-        verify(publicationNotifier).notifyIfNewlyPublished(announced.capture());
-        assertThat(announced.getValue().getStatus()).isEqualTo(PostStatus.DRAFT);
+        assertThat(post.getStatus()).isEqualTo(PostStatus.PUBLISHED);
+        assertThat(post.getNotifiedAt()).isNull();
     }
 
     /**
-     * The slug collision path returns a different slug than the caller asked
-     * for, and the announcement has to carry the one that was stored — the app
-     * deep-links by slug, so announcing the requested one would send everybody
-     * to a 404.
+     * The collision path returns a different slug than the caller asked for,
+     * and the stored one is what the announcement will carry — the app
+     * deep-links by slug, so getting this wrong sends everybody to a 404.
      */
     @Test
-    void announcesTheDeduplicatedSlugWhenTheRequestedOneIsTaken() {
+    void aCollidingSlugIsDeduplicatedBeforeThePostIsStored() {
         when(loadPostPort.existsBySlug("episode-44")).thenReturn(true);
         when(loadPostPort.existsBySlug("episode-44-1")).thenReturn(false);
 
-        service.execute(new CreatePostUseCase.Input("Episode 44", "episode-44",
+        Post post = created(new CreatePostUseCase.Input("Episode 44", "episode-44",
                 PostStatus.PUBLISHED, Instant.now(), "cover.jpg", "[]", "[]", UUID.randomUUID()));
 
-        ArgumentCaptor<Post> announced = ArgumentCaptor.forClass(Post.class);
-        verify(publicationNotifier).notifyIfNewlyPublished(announced.capture());
-        assertThat(announced.getValue().getSlug()).isEqualTo("episode-44-1");
+        assertThat(post.getSlug()).isEqualTo("episode-44-1");
+    }
+
+    /**
+     * The YouTube sync's shape. The video id is both the sync's own dedup key
+     * and the source of the platform link the episode screen renders.
+     */
+    @Test
+    void aYoutubeVideoIdBecomesMetadataAndAPlatformLink() {
+        Post post = created(new CreatePostUseCase.Input("Episode 45", "episode-45",
+                PostStatus.PUBLISHED, Instant.now(), "cover.jpg", "[]", "[]", null,
+                "vid-45", "Description", 3600, 45));
+
+        assertThat(post.getYoutubeVideoId()).isEqualTo("vid-45");
+        assertThat(post.getPlatformLinks()).singleElement().satisfies(link -> {
+            assertThat(link.platform()).isEqualTo(PostPlatform.YOUTUBE);
+            assertThat(link.externalId()).isEqualTo("vid-45");
+        });
+    }
+
+    /**
+     * A manually authored post carries no video id, so it must not acquire an
+     * empty platform link — the episode screen renders one chip per link.
+     */
+    @Test
+    void aManuallyAuthoredPostGetsNoPlatformLink() {
+        Post post = created(new CreatePostUseCase.Input("Hand written", "hand-written",
+                PostStatus.PUBLISHED, Instant.now(), "cover.jpg", "[]", "[]", UUID.randomUUID()));
+
+        assertThat(post.getYoutubeVideoId()).isNull();
+        assertThat(post.getPlatformLinks()).isEmpty();
     }
 }
