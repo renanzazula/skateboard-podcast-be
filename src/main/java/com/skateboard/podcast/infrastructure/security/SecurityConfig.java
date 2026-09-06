@@ -19,24 +19,35 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtGra
 import org.springframework.security.web.SecurityFilterChain;
 
 /**
- * OAuth2 resource server validating access tokens issued by Keycloak: RS256,
- * verified against the realm's JWKS endpoint, restricted to tokens whose
- * "aud" includes this service (see {@link AudienceValidator}). Authorities are
- * read verbatim (no ROLE_/SCOPE_ prefix) from the "authorities" claim, which
- * the realm's "authorities" protocol mapper (realm-export.json) populates
- * with the user's effective FUNC_* roles — so
- * {@code @PreAuthorize("hasAuthority('FUNC_...')")} checks on the controllers
- * work unmodified.
+ * Configures this service as an OAuth2 Resource Server for access tokens
+ * issued by Keycloak.
+ *
+ * JWT signatures are verified using the realm's JWKS endpoint. In addition
+ * to the standard issuer and timestamp validation, {@link AudienceValidator}
+ * requires the token's {@code aud} claim to contain this service's audience,
+ * preventing tokens intended for another API from being accepted.
  * <p>
- * The JWKS URI is built directly from {@code issuerUri} (Keycloak's stable
- * {@code /protocol/openid-connect/certs} convention) instead of doing OIDC
- * discovery ({@code JwtDecoders.fromIssuerLocation}): discovery makes a
- * blocking HTTP call while this bean is constructed, coupling app startup to
- * Keycloak being reachable at that exact moment. Building the JWKS URI
- * directly keeps key fetching lazy (first token verification), which is both
- * more resilient at boot and lets tests substitute a fake JWT
- * (spring-security-test's {@code jwt()} request post-processor) without
- * needing a real Keycloak reachable at all.
+ * Authorities are read verbatim from the {@code authorities} claim without
+ * Spring's default {@code ROLE_} or {@code SCOPE_} prefixes. The Keycloak
+ * {@code authorities} protocol mapper, defined in {@code realm-export.json},
+ * populates this claim with the user's effective {@code FUNC_*} permissions.
+ * This allows controller authorization such as:
+ *
+ * <pre>
+ * {@code @PreAuthorize("hasAuthority('FUNC_PODCAST_CREATE')")}
+ * </pre>
+ *
+ * The JWKS URI is derived directly from the Keycloak issuer URI using
+ * Keycloak's {@code /protocol/openid-connect/certs} endpoint instead of
+ * relying on issuer-based OIDC discovery.
+ * <p>
+ * Avoiding discovery during decoder construction removes a synchronous
+ * dependency on Keycloak during application startup. JWKS retrieval occurs
+ * when token decoding requires the signing keys.
+ * <p>
+ * This also keeps controller security tests independent from a running
+ * Keycloak instance: Spring Security Test's {@code jwt()} request
+ * post-processor can provide a test {@link Jwt} directly.
  */
 @Configuration
 @EnableWebSecurity
