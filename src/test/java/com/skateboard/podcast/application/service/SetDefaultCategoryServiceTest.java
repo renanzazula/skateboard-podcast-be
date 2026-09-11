@@ -53,7 +53,8 @@ class SetDefaultCategoryServiceTest {
         Category existing = Category.createFromYoutube("podcasts", "PL1", "Podcasts", null, null, true);
         when(categoryRepositoryPort.findAll()).thenReturn(List.of(existing));
 
-        assertThatThrownBy(() -> service.execute(UUID.randomUUID()))
+        UUID unknownId = UUID.randomUUID();
+        assertThatThrownBy(() -> service.execute(unknownId))
                 .isInstanceOf(CategoryNotFoundException.class);
         assertThat(existing.isDefault()).isTrue();
         assertThat(existing.isDefaultLocked()).isFalse();

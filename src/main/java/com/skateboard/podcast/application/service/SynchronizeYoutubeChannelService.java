@@ -321,6 +321,6 @@ public class SynchronizeYoutubeChannelService implements SynchronizeYoutubeChann
     private String generateSlug(String title) {
         return title.toLowerCase()
                 .replaceAll("[^a-z0-9]+", "-")
-                .replaceAll("^-|-$", "");
+                .replaceAll("(^-)|(-$)", "");
     }
 }

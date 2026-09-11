@@ -66,7 +66,9 @@ public class PostJpaEntity {
     @Column(name = "notified_at")
     private Instant notifiedAt;
 
-    public PostJpaEntity() {}
+    public PostJpaEntity() {
+        // required by JPA
+    }
 
     public UUID getId()          { return id; }
     public String getSlug()      { return slug; }

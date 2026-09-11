@@ -28,10 +28,11 @@ public class YoutubeDescriptionParser {
     // Matched against a single (trimmed) line, so ^ already anchors to that line's start.
     private static final Pattern METADATA_HEADER = Pattern.compile(
             "^(APOIE NOSSO CANAL|CONVIDADOS?|APRESENTADO POR|APOIO|EDI[CÇ][AÃ]O)\\s*:?", FLAGS);
-    private static final Pattern GUEST_HEADER = Pattern.compile("^CONVIDADOS?\\s*:\\s*(.*)$", FLAGS);
+    private static final Pattern GUEST_HEADER = Pattern.compile("^CONVIDADOS?\\s*:(.*)$", FLAGS);
     private static final Pattern SEPARATOR_LINE = Pattern.compile("^-{3,}$");
+    // Only the lowercase range is needed: FLAGS already includes CASE_INSENSITIVE.
     private static final Pattern INSTAGRAM_URL = Pattern.compile(
-            "https?://(?:www\\.)?instagram\\.com/([A-Za-z0-9._]+)/?(?:\\?\\S*)?", FLAGS);
+            "https?://(?:www\\.)?instagram\\.com/([a-z0-9._]+)/?(?:\\?\\S*)?", FLAGS);
 
     private final ObjectMapper objectMapper;
 

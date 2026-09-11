@@ -148,7 +148,7 @@ public class PostPersistenceAdapter implements LoadPostPort, SavePostPort {
         Map<UUID, List<PostPlatformLink>> linksByPostId = loadLinksByPostId(ids);
         return entities.stream()
                 .map(e -> toDomain(e, linksByPostId.getOrDefault(e.getId(), List.of())))
-                .collect(Collectors.toList());
+                .toList();
     }
 
     private Post toDomainWithLinks(PostJpaEntity e) {

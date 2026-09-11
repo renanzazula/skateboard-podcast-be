@@ -33,7 +33,9 @@ public class PostPlatformLinkJpaEntity {
     @Column(nullable = false)
     private Instant updatedAt;
 
-    public PostPlatformLinkJpaEntity() {}
+    public PostPlatformLinkJpaEntity() {
+        // required by JPA
+    }
 
     public UUID getId()             { return id; }
     public UUID getPostId()         { return postId; }
