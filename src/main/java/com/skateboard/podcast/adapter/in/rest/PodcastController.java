@@ -43,6 +43,16 @@ public class PodcastController implements PodcastApi {
 
     @Override
     @PreAuthorize("hasAuthority('FUNC_TAB_PODCAST')")
+    public ResponseEntity<PostResponse> getPodcastFeaturedEpisode() {
+        PostResponse response = podcastService.getFeaturedEpisode();
+        if (response == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No featured episode available");
+        }
+        return ResponseEntity.ok(response);
+    }
+
+    @Override
+    @PreAuthorize("hasAuthority('FUNC_TAB_PODCAST')")
     public ResponseEntity<PostResponse> getPodcastPostById(UUID id) {
         PostResponse response = podcastService.getPostById(id);
         if (response == null) {

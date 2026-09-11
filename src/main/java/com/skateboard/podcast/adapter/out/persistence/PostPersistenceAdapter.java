@@ -135,6 +135,13 @@ public class PostPersistenceAdapter implements LoadPostPort, SavePostPort {
                 .getContent());
     }
 
+    @Override
+    public List<Post> findLatestPublishedYoutubePosts(int limit) {
+        return toDomainWithLinks(jpaRepository
+                .findLatestByStatusAndYoutubeVideoIdNotNull(PostStatus.PUBLISHED.name(), PageRequest.of(0, limit))
+                .getContent());
+    }
+
     // Batches the platform-link lookup into one query per page instead of one per post.
     private List<Post> toDomainWithLinks(List<PostJpaEntity> entities) {
         List<UUID> ids = entities.stream().map(PostJpaEntity::getId).toList();

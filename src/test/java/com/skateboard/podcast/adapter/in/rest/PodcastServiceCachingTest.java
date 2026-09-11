@@ -67,6 +67,9 @@ class PodcastServiceCachingTest {
         SynchronizeYoutubeChannelUseCase synchronizeYoutubeChannelUseCase() { return mock(SynchronizeYoutubeChannelUseCase.class); }
 
         @Bean
+        GetFeaturedEpisodeUseCase getFeaturedEpisodeUseCase() { return mock(GetFeaturedEpisodeUseCase.class); }
+
+        @Bean
         GetAdminCategoriesUseCase getAdminCategoriesUseCase() { return mock(GetAdminCategoriesUseCase.class); }
 
         @Bean
@@ -85,10 +88,10 @@ class PodcastServiceCachingTest {
                                       GetCategoriesUseCase categories, GetPostsByCategoryUseCase postsByCategory,
                                       GetAdminCategoriesUseCase adminCategories, UpdateCategoryUseCase updateCategory,
                                       ReorderCategoriesUseCase reorderCategories, SetDefaultCategoryUseCase setDefaultCategory,
-                                      SynchronizeYoutubeChannelUseCase sync) {
+                                      SynchronizeYoutubeChannelUseCase sync, GetFeaturedEpisodeUseCase featuredEpisode) {
             return new PodcastService(create, feed, bySlug, byId, update, delete, importPosts,
                     categories, postsByCategory, adminCategories, updateCategory,
-                    reorderCategories, setDefaultCategory, sync, new ObjectMapper());
+                    reorderCategories, setDefaultCategory, sync, featuredEpisode, new ObjectMapper());
         }
     }
 
@@ -101,11 +104,13 @@ class PodcastServiceCachingTest {
     @Autowired private ImportPostsUseCase importPostsUseCase;
     @Autowired private GetCategoriesUseCase getCategoriesUseCase;
     @Autowired private GetPostsByCategoryUseCase getPostsByCategoryUseCase;
+    @Autowired private GetFeaturedEpisodeUseCase getFeaturedEpisodeUseCase;
 
     @BeforeEach
     void setUp() {
         reset(createPostUseCase, getPostUseCase, getPostBySlugUseCase,
-                deletePostUseCase, importPostsUseCase, getCategoriesUseCase, getPostsByCategoryUseCase);
+                deletePostUseCase, importPostsUseCase, getCategoriesUseCase, getPostsByCategoryUseCase,
+                getFeaturedEpisodeUseCase);
         cacheManager.getCache(PodcastService.POST_CACHE).clear();
         when(getPostUseCase.execute(any(), anyInt(), anyInt()))
                 .thenReturn(new GetPostUseCase.Result(List.of(), 0));
@@ -165,6 +170,26 @@ class PodcastServiceCachingTest {
 
         service.getPostsByCategory("events", 0, 10);
         verify(getPostsByCategoryUseCase, times(1)).execute("events", 0, 10);
+    }
+
+    @Test
+    void featuredEpisodeIsCached() {
+        when(getFeaturedEpisodeUseCase.execute()).thenReturn(java.util.Optional.of(publishedPost()));
+
+        service.getFeaturedEpisode();
+        service.getFeaturedEpisode();
+
+        verify(getFeaturedEpisodeUseCase, times(1)).execute();
+    }
+
+    @Test
+    void nullFeaturedEpisodeResultIsNotCached() {
+        when(getFeaturedEpisodeUseCase.execute()).thenReturn(java.util.Optional.empty());
+
+        service.getFeaturedEpisode();
+        service.getFeaturedEpisode();
+
+        verify(getFeaturedEpisodeUseCase, times(2)).execute();
     }
 
     @Test

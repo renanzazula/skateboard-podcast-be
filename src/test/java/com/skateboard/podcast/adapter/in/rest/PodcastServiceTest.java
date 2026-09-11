@@ -68,6 +68,9 @@ class PodcastServiceTest {
     @Mock
     private SetDefaultCategoryUseCase setDefaultCategoryUseCase;
 
+    @Mock
+    private GetFeaturedEpisodeUseCase getFeaturedEpisodeUseCase;
+
     private PodcastService service;
 
     @BeforeEach
@@ -77,7 +80,7 @@ class PodcastServiceTest {
                 updatePostUseCase, deletePostUseCase, importPostsUseCase, getCategoriesUseCase,
                 getPostsByCategoryUseCase, getAdminCategoriesUseCase, updateCategoryUseCase,
                 reorderCategoriesUseCase, setDefaultCategoryUseCase,
-                synchronizeYoutubeChannelUseCase, new ObjectMapper());
+                synchronizeYoutubeChannelUseCase, getFeaturedEpisodeUseCase, new ObjectMapper());
     }
 
     @Test
@@ -276,6 +279,25 @@ class PodcastServiceTest {
 
         assertThat(response.getTotal()).isEqualTo(1);
         assertThat(response.getPosts()).hasSize(1);
+    }
+
+    @Test
+    void getFeaturedEpisodeMapsUseCaseResultToDto() {
+        Post post = Post.create("TOM YUKIO - Skateboard Podcast #124", "tom-yukio-skateboard-podcast-124",
+                PostStatus.PUBLISHED, Instant.parse("2026-01-01T00:00:00Z"), "http://thumb.jpg", "[]", "[]", null);
+        when(getFeaturedEpisodeUseCase.execute()).thenReturn(Optional.of(post));
+
+        PostResponse dto = service.getFeaturedEpisode();
+
+        assertThat(dto.getSlug()).isEqualTo("tom-yukio-skateboard-podcast-124");
+        assertThat(dto.getTitle()).isEqualTo("TOM YUKIO - Skateboard Podcast #124");
+    }
+
+    @Test
+    void getFeaturedEpisodeReturnsNullWhenNoneQualifies() {
+        when(getFeaturedEpisodeUseCase.execute()).thenReturn(Optional.empty());
+
+        assertThat(service.getFeaturedEpisode()).isNull();
     }
 
     @Test

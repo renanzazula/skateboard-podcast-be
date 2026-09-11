@@ -71,6 +71,14 @@ podcast:
     # PendingPodcastNotificationJob). Frequent enough that a broker blip costs
     # minutes, not a release.
     cron: ${PODCAST_NOTIFICATIONS_CRON:0 */5 * * * *}
+  featured:
+    # How many of the most recently published YouTube posts
+    # GetFeaturedEpisodeService scans (newest first) for the latest one
+    # matching the official "Skateboard Podcast #<n>" pattern, before giving
+    # up. Bounds the query rather than scanning the whole table; at the
+    # channel's actual upload cadence a real episode is expected well inside
+    # this window.
+    candidate-scan-limit: ${PODCAST_FEATURED_CANDIDATE_SCAN_LIMIT:50}
 
 logging:
   pattern:

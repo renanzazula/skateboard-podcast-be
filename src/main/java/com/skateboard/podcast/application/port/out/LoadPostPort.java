@@ -26,4 +26,12 @@ public interface LoadPostPort {
      * {@code notified_at IS NULL}, so no second table is needed to find it.
      */
     List<Post> findPublishedAwaitingNotification(java.time.Instant publishedAfter, int limit);
+
+    /**
+     * Up to {@code limit} of the most recently published, YouTube-sourced
+     * posts, newest first — the candidate pool
+     * {@link com.skateboard.podcast.application.service.GetFeaturedEpisodeService}
+     * scans for the latest post matching the official episode title pattern.
+     */
+    List<Post> findLatestPublishedYoutubePosts(int limit);
 }

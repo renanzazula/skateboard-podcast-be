@@ -58,14 +58,14 @@ adapter/in/rest       → PodcastController (implements generated PodcastApi) + 
 adapter/in/scheduler  → YoutubeSyncJob, PendingPodcastNotificationJob — @Scheduled + @SchedulerLock (ShedLock),
                          trigger a use case only, no HTTP/persistence logic of their own
 application/port/in   → one interface per use case: Create/Get/GetById/GetBySlug/Update/DeletePostUseCase,
-                         ImportPostsUseCase, SynchronizeYoutubeChannelUseCase for posts; GetCategoriesUseCase,
-                         GetAdminCategoriesUseCase, GetPostsByCategoryUseCase, UpdateCategoryUseCase,
-                         ReorderCategoriesUseCase, SetDefaultCategoryUseCase for categories — each with a
-                         nested Input/Result record
+                         ImportPostsUseCase, SynchronizeYoutubeChannelUseCase, GetFeaturedEpisodeUseCase for
+                         posts; GetCategoriesUseCase, GetAdminCategoriesUseCase, GetPostsByCategoryUseCase,
+                         UpdateCategoryUseCase, ReorderCategoriesUseCase, SetDefaultCategoryUseCase for
+                         categories — each with a nested Input/Result record
 application/service   → one @Service per use case, implementing the matching port/in interface, plus
                          MatchSpotifyEpisodeService (not exposed as a use case; called only from the YouTube
                          sync) and small stateless helpers: EpisodeNumberParser, YoutubeDescriptionParser,
-                         TitleNormalizer
+                         TitleNormalizer, PodcastTitlePattern
 application/port/out  → LoadPostPort/SavePostPort (posts), CategoryRepositoryPort/PostCategoryPort
                          (categories and their post associations), YoutubeContentPort, SpotifyContentPort,
                          PublishDomainEventPort — all persistence/outbound-integration-facing
@@ -207,6 +207,30 @@ Publisher confirms (`spring.rabbitmq.publisher-confirm-type: simple`) are requir
 anything — without them a send the broker never accepted looks successful and the post is marked
 notified for an event nobody received. A confirm still only says the broker took the message, not that a
 queue was bound to receive it.
+
+## Featured Player AUTO selection (`GET /api/podcast/featured-episode`)
+
+The Home dashboard's Featured Player lives in `skateboard-app-config-be` (`HomeFeaturedPlayerConfig`,
+singleton row, `selectionMode` MANUAL/AUTO) and is resolved for the mobile client by
+`skateboard-ui-backend` — this service does not own or store the Featured Player selection at all. What
+this service owns is the one piece AUTO mode needs: **which post is the latest official episode**.
+
+- `GET /api/podcast/featured-episode` (`FUNC_TAB_PODCAST`, no new permission) returns the latest
+  PUBLISHED, YouTube-sourced post whose title matches `PodcastTitlePattern.isNumberedEpisode` (the same
+  "Skateboard Podcast #<n>" pattern the publish notifier gates on — see above), or 404 when nothing
+  currently qualifies. `GetFeaturedEpisodeService` scans up to `podcast.featured.candidate-scan-limit`
+  (default 50) of the most recent such posts, newest first, and returns the first pattern match — bounded
+  rather than scanning the whole table, since a real numbered episode is expected well within that window
+  at the channel's actual upload cadence.
+- **This is read-only and has no interaction with the YouTube sync.** MANUAL and AUTO are indistinguishable
+  from this service's point of view: the sync imports every video exactly as before regardless of mode,
+  and this endpoint is just queried live, by ui-backend, whenever AUTO is in effect. Nothing here needs to
+  know which mode is active, push updates on sync completion, or call another service.
+- Cached like the other single-post reads (`PodcastService.getFeaturedEpisode()`, `POST_CACHE` key
+  `'featured-episode'`, `unless = "#result == null"` — no `sync = true`: Spring Cache rejects combining
+  `sync` with `unless` on the same `@Cacheable`, and `unless` is the one that matters here so a 404 isn't
+  cached) and evicted by the existing blanket `@CacheEvict(allEntries = true)` on every post mutation — no
+  new eviction logic needed.
 
 ## Auth model
 

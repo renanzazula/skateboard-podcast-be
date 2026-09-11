@@ -43,6 +43,7 @@ public class PodcastService {
     private final ReorderCategoriesUseCase reorderCategoriesUseCase;
     private final SetDefaultCategoryUseCase setDefaultCategoryUseCase;
     private final SynchronizeYoutubeChannelUseCase synchronizeYoutubeChannelUseCase;
+    private final GetFeaturedEpisodeUseCase getFeaturedEpisodeUseCase;
     private final ObjectMapper objectMapper;
 
     public PodcastService(CreatePostUseCase createPostUseCase,
@@ -59,6 +60,7 @@ public class PodcastService {
                           ReorderCategoriesUseCase reorderCategoriesUseCase,
                           SetDefaultCategoryUseCase setDefaultCategoryUseCase,
                           SynchronizeYoutubeChannelUseCase synchronizeYoutubeChannelUseCase,
+                          GetFeaturedEpisodeUseCase getFeaturedEpisodeUseCase,
                           ObjectMapper objectMapper) {
         this.createPostUseCase = createPostUseCase;
         this.getPostUseCase = getPostUseCase;
@@ -74,6 +76,7 @@ public class PodcastService {
         this.reorderCategoriesUseCase = reorderCategoriesUseCase;
         this.setDefaultCategoryUseCase = setDefaultCategoryUseCase;
         this.synchronizeYoutubeChannelUseCase = synchronizeYoutubeChannelUseCase;
+        this.getFeaturedEpisodeUseCase = getFeaturedEpisodeUseCase;
         this.objectMapper = objectMapper;
     }
 
@@ -139,6 +142,21 @@ public class PodcastService {
                 .total(result.total())
                 .page(page)
                 .size(size);
+    }
+
+    /**
+     * The latest published, YouTube-sourced post matching the official
+     * "Skateboard Podcast #&lt;n&gt;" episode pattern, or {@code null} when
+     * nothing currently qualifies — same null-means-404 convention as
+     * {@link #getPostBySlug}/{@link #getPostById}. Backs the Home Featured
+     * Player's AUTO selection mode; consumed by skateboard-ui-backend, never
+     * directly by the mobile client.
+     */
+    @Cacheable(cacheNames = POST_CACHE, key = "'featured-episode'", unless = "#result == null")
+    public PostResponse getFeaturedEpisode() {
+        return getFeaturedEpisodeUseCase.execute()
+                .map(this::toDto)
+                .orElse(null);
     }
 
     // ── Mutations (evict both caches; update may change the slug, so

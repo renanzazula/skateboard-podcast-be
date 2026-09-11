@@ -40,4 +40,12 @@ public interface SpringPostRepository extends JpaRepository<PostJpaEntity, UUID>
     Page<PostJpaEntity> findAwaitingNotification(@Param("status") String status,
                                                   @Param("publishedAfter") Instant publishedAfter,
                                                   Pageable pageable);
+
+    // Candidate pool for the Home Featured Player's AUTO selection
+    // (GetFeaturedEpisodeService) — bounded, newest-first. The official
+    // episode title pattern itself is applied in Java (PodcastTitlePattern),
+    // not here, so there's one place the pattern is defined.
+    @Query("SELECT p FROM PostJpaEntity p WHERE p.status = :status AND p.youtubeVideoId IS NOT NULL " +
+           "ORDER BY p.publishAt DESC NULLS LAST, p.id")
+    Page<PostJpaEntity> findLatestByStatusAndYoutubeVideoIdNotNull(@Param("status") String status, Pageable pageable);
 }
