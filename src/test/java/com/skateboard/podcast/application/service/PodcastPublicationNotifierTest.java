@@ -162,9 +162,31 @@ class PodcastPublicationNotifierTest {
                 .containsEntry("title", post.getTitle());
     }
 
+    @Test
+    void doesNotAnnounceAVideoWhoseTitleIsNotANumberedEpisode() {
+        Post post = post("tom-yukio-interview", "TOM YUKIO - Interview",
+                Instant.now().minus(1, ChronoUnit.HOURS));
+
+        assertThat(notifier.notifyIfNewlyPublished(post)).isFalse();
+        assertThat(post.getNotifiedAt()).isNull();
+        verifyNoInteractions(publishDomainEventPort);
+    }
+
+    @Test
+    void announcesAVideoWhoseTitleMatchesTheNumberedEpisodePattern() {
+        Post post = post("danilo-cerezini-skateboard-podcast-114",
+                "DANILO CEREZINI - Skateboard Podcast #114", Instant.now().minus(1, ChronoUnit.HOURS));
+
+        assertThat(notifier.notifyIfNewlyPublished(post)).isTrue();
+        assertThat(post.getNotifiedAt()).isNotNull();
+    }
+
     private Post publishedPost(Instant publishAt) {
-        return Post.reconstitute(UUID.randomUUID(), "barcelona-street-sessions-14",
-                "Barcelona Street Sessions #14", PostStatus.PUBLISHED, publishAt,
+        return post("guest-name-skateboard-podcast-14", "GUEST NAME - Skateboard Podcast #14", publishAt);
+    }
+
+    private Post post(String slug, String title, Instant publishAt) {
+        return Post.reconstitute(UUID.randomUUID(), slug, title, PostStatus.PUBLISHED, publishAt,
                 "cover.jpg", null, null, "[]", "[]", Instant.now(), Instant.now(), UUID.randomUUID(),
                 null, null, null, 14, null, List.of());
     }

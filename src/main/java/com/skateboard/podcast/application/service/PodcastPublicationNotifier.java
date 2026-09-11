@@ -32,6 +32,10 @@ import java.util.UUID;
  *       carries each video's real publication date, so without this the first
  *       run against an existing channel would push the entire back
  *       catalogue.</li>
+ *   <li>the title pattern — the YouTube channel also carries interviews,
+ *       highlight reels and specials; only a title matching
+ *       {@code Skateboard Podcast #<n>} ({@link PodcastTitlePattern}) is a real
+ *       numbered episode worth a push. A non-matching post is still stored.</li>
  * </ul>
  *
  * <p>The event id is derived from the post id rather than random. Two things
@@ -101,6 +105,11 @@ public class PodcastPublicationNotifier {
             return false;
         }
         if (post.getNotifiedAt() != null) {
+            return false;
+        }
+        if (!PodcastTitlePattern.isNumberedEpisode(post.getTitle())) {
+            log.debug("postId={} not announced: title \"{}\" is not a numbered episode",
+                    post.getId(), post.getTitle());
             return false;
         }
         return isRecent(post.getPublishAt());

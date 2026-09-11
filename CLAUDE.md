@@ -176,7 +176,7 @@ key `podcast.published.v1`, and knows nothing about devices, preferences, Expo o
 
 `PodcastPublicationNotifier` is the single decision point, called from `CreatePostService` (which every
 create path funnels through — manual authoring, JSON import and the YouTube sync) and from
-`UpdatePostService` on a genuine non-PUBLISHED → PUBLISHED transition. Three gates, each guarding a
+`UpdatePostService` on a genuine non-PUBLISHED → PUBLISHED transition. Four gates, each guarding a
 specific failure:
 
 - **`podcast.notifications.enabled`** — false by default, so a deployment is silent until someone turns
@@ -187,6 +187,12 @@ specific failure:
   hard-codes `PostStatus.PUBLISHED` and uses each video's *real* publication date, so without a recency
   window the first sync against an established channel would push the entire archive. `V7` backfills
   existing rows to `now()` for the same reason.
+- **Title must be a numbered episode** — `PodcastTitlePattern.isNumberedEpisode(title)` requires the title
+  to contain `Skateboard Podcast #<number>` (case-insensitive, optional text before it, whitespace tolerated
+  around the `#`). The YouTube channel also carries interviews, highlight reels and specials
+  (`TOM YUKIO - Interview`, `Skateboard Podcast Special`); those are still synced and stored, just not
+  announced. This gate lives in `PodcastPublicationNotifier.qualifies()` so it covers both the inline
+  publish call and `PendingPodcastNotificationJob` — filtering in the sync alone would miss the outbox path.
 
 **The event id is derived from the post id** (`UUID.nameUUIDFromBytes("PODCAST_PUBLISHED:" + id)`), not
 random. Two things can emit for one post — the inline call and `PendingPodcastNotificationJob` — and the
