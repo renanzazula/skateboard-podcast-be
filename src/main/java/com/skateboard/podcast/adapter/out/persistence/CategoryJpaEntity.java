@@ -54,7 +54,9 @@ public class CategoryJpaEntity {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    public CategoryJpaEntity() {}
+    public CategoryJpaEntity() {
+        // required by JPA
+    }
 
     public UUID getId()             { return id; }
     public String getSlug()         { return slug; }

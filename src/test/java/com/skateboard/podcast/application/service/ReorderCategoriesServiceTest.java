@@ -54,8 +54,9 @@ class ReorderCategoriesServiceTest {
 
     @Test
     void duplicateIdIsRejected() {
-        assertThatThrownBy(() -> service.execute(new ReorderCategoriesUseCase.Input(
-                List.of(podcasts.getId(), podcasts.getId(), events.getId()))))
+        ReorderCategoriesUseCase.Input input = new ReorderCategoriesUseCase.Input(
+                List.of(podcasts.getId(), podcasts.getId(), events.getId()));
+        assertThatThrownBy(() -> service.execute(input))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Duplicate");
         verify(categoryRepositoryPort, never()).save(any());
@@ -63,8 +64,9 @@ class ReorderCategoriesServiceTest {
 
     @Test
     void unknownIdIsRejected() {
-        assertThatThrownBy(() -> service.execute(new ReorderCategoriesUseCase.Input(
-                List.of(podcasts.getId(), events.getId(), UUID.randomUUID()))))
+        ReorderCategoriesUseCase.Input input = new ReorderCategoriesUseCase.Input(
+                List.of(podcasts.getId(), events.getId(), UUID.randomUUID()));
+        assertThatThrownBy(() -> service.execute(input))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Unknown");
         verify(categoryRepositoryPort, never()).save(any());
@@ -72,8 +74,9 @@ class ReorderCategoriesServiceTest {
 
     @Test
     void staleListMissingACategoryIsRejected() {
-        assertThatThrownBy(() -> service.execute(new ReorderCategoriesUseCase.Input(
-                List.of(podcasts.getId(), events.getId()))))
+        ReorderCategoriesUseCase.Input input = new ReorderCategoriesUseCase.Input(
+                List.of(podcasts.getId(), events.getId()));
+        assertThatThrownBy(() -> service.execute(input))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("every category");
         verify(categoryRepositoryPort, never()).save(any());

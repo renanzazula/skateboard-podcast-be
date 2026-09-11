@@ -84,37 +84,49 @@ public class YoutubeClient implements YoutubeContentPort {
         String pageToken = null;
         do {
             int pageSize = limit != null ? Math.min(50, limit - videos.size()) : 50;
-            String token = pageToken;
-            YoutubePlaylistItemsResponse response = get("/playlistItems", uri -> {
-                uri = uri.queryParam("part", "snippet,contentDetails")
-                        .queryParam("playlistId", playlistId)
-                        .queryParam("maxResults", pageSize);
-                return token != null ? uri.queryParam("pageToken", token) : uri;
-            }, YoutubePlaylistItemsResponse.class);
-
+            YoutubePlaylistItemsResponse response = fetchPlaylistItemsPage(playlistId, pageSize, pageToken);
             if (response == null || response.items() == null) break;
-            for (YoutubePlaylistItemsResponse.Item item : response.items()) {
-                if (item.contentDetails() == null || item.snippet() == null) continue;
-                YoutubePlaylistItemsResponse.Thumbnail thumbnail = bestThumbnail(item.snippet().thumbnails());
-                // The video's real publication time; snippet.publishedAt is only the
-                // playlist-add time. Fall back to it for private/deleted items that
-                // omit videoPublishedAt.
-                String publishedAt = item.contentDetails().videoPublishedAt() != null
-                        ? item.contentDetails().videoPublishedAt()
-                        : item.snippet().publishedAt();
-                videos.add(new YoutubeVideo(
-                        item.contentDetails().videoId(),
-                        item.snippet().title(),
-                        item.snippet().description(),
-                        parsePublishedAt(publishedAt),
-                        thumbnail != null ? thumbnail.url() : null,
-                        thumbnail != null ? thumbnail.width() : null,
-                        thumbnail != null ? thumbnail.height() : null));
-                if (limit != null && videos.size() >= limit) break;
-            }
+            addVideos(videos, response.items(), limit);
             pageToken = response.nextPageToken();
         } while (pageToken != null && (limit == null || videos.size() < limit));
         return videos;
+    }
+
+    private YoutubePlaylistItemsResponse fetchPlaylistItemsPage(String playlistId, int pageSize, String pageToken) {
+        return get("/playlistItems", uri -> {
+            uri = uri.queryParam("part", "snippet,contentDetails")
+                    .queryParam("playlistId", playlistId)
+                    .queryParam("maxResults", pageSize);
+            return pageToken != null ? uri.queryParam("pageToken", pageToken) : uri;
+        }, YoutubePlaylistItemsResponse.class);
+    }
+
+    private static void addVideos(List<YoutubeVideo> videos, List<YoutubePlaylistItemsResponse.Item> items, Integer limit) {
+        for (YoutubePlaylistItemsResponse.Item item : items) {
+            YoutubeVideo video = toYoutubeVideo(item);
+            if (video == null) continue;
+            videos.add(video);
+            if (limit != null && videos.size() >= limit) break;
+        }
+    }
+
+    private static YoutubeVideo toYoutubeVideo(YoutubePlaylistItemsResponse.Item item) {
+        if (item.contentDetails() == null || item.snippet() == null) return null;
+        YoutubePlaylistItemsResponse.Thumbnail thumbnail = bestThumbnail(item.snippet().thumbnails());
+        // The video's real publication time; snippet.publishedAt is only the
+        // playlist-add time. Fall back to it for private/deleted items that
+        // omit videoPublishedAt.
+        String publishedAt = item.contentDetails().videoPublishedAt() != null
+                ? item.contentDetails().videoPublishedAt()
+                : item.snippet().publishedAt();
+        return new YoutubeVideo(
+                item.contentDetails().videoId(),
+                item.snippet().title(),
+                item.snippet().description(),
+                parsePublishedAt(publishedAt),
+                thumbnail != null ? thumbnail.url() : null,
+                thumbnail != null ? thumbnail.width() : null,
+                thumbnail != null ? thumbnail.height() : null);
     }
 
     @Override

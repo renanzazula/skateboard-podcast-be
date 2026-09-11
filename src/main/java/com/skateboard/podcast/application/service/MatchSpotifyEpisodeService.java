@@ -64,11 +64,7 @@ public class MatchSpotifyEpisodeService {
 
         List<SpotifyEpisode> episodes = spotifyContentPort.getShowEpisodes(showId);
         List<Post> allPosts = loadPostPort.findAll(0, (int) Math.max(loadPostPort.countAll(), 1));
-        Set<String> alreadyLinkedExternalIds = allPosts.stream()
-                .flatMap(p -> p.getPlatformLinks().stream())
-                .filter(link -> link.platform() == PostPlatform.SPOTIFY)
-                .map(PostPlatformLink::externalId)
-                .collect(Collectors.toSet());
+        Set<String> alreadyLinkedExternalIds = alreadyLinkedExternalIds(allPosts);
 
         // Once a post is claimed by an episode in this run it's off the table
         // for the rest of the batch, so two close-together episodes can't
@@ -80,30 +76,53 @@ public class MatchSpotifyEpisodeService {
             if (alreadyLinkedExternalIds.contains(episode.id())) {
                 continue;
             }
-            Post best = null;
-            int bestScore = 0;
-            for (Post candidate : allPosts) {
-                if (claimed.contains(candidate) || hasSpotifyLink(candidate)) continue;
-                int score = score(episode, candidate);
-                if (score > bestScore) {
-                    bestScore = score;
-                    best = candidate;
-                }
-            }
-            if (best != null && bestScore >= MATCH_THRESHOLD) {
-                best.attachPlatformLink(new PostPlatformLink(PostPlatform.SPOTIFY, episode.id(), episode.externalUrl()));
-                savePostPort.save(best);
-                claimed.add(best);
+            Match best = findBestMatch(episode, allPosts, claimed);
+            if (best.post() != null && best.score() >= MATCH_THRESHOLD) {
+                linkEpisode(episode, best.post(), best.score());
+                claimed.add(best.post());
                 matched++;
-                log.info("spotifySync episodeId={} postId={} score={} status=MATCHED", episode.id(), best.getId(), bestScore);
             } else {
-                log.info("spotifySync episodeId={} title={} episodeNumber={} publishedAt={} bestScore={} status=UNMATCHED",
-                        episode.id(), episode.title(), EpisodeNumberParser.parse(episode.title()), episode.releaseDate(), bestScore);
+                logUnmatched(episode, best.score());
                 unmatched++;
             }
         }
         log.info("spotifySync showId={} fetched={} matched={} unmatched={}", showId, episodes.size(), matched, unmatched);
         return new Result(matched, unmatched);
+    }
+
+    private Set<String> alreadyLinkedExternalIds(List<Post> allPosts) {
+        return allPosts.stream()
+                .flatMap(p -> p.getPlatformLinks().stream())
+                .filter(link -> link.platform() == PostPlatform.SPOTIFY)
+                .map(PostPlatformLink::externalId)
+                .collect(Collectors.toSet());
+    }
+
+    private record Match(Post post, int score) {}
+
+    private Match findBestMatch(SpotifyEpisode episode, List<Post> allPosts, Set<Post> claimed) {
+        Post best = null;
+        int bestScore = 0;
+        for (Post candidate : allPosts) {
+            if (claimed.contains(candidate) || hasSpotifyLink(candidate)) continue;
+            int score = score(episode, candidate);
+            if (score > bestScore) {
+                bestScore = score;
+                best = candidate;
+            }
+        }
+        return new Match(best, bestScore);
+    }
+
+    private void linkEpisode(SpotifyEpisode episode, Post post, int score) {
+        post.attachPlatformLink(new PostPlatformLink(PostPlatform.SPOTIFY, episode.id(), episode.externalUrl()));
+        savePostPort.save(post);
+        log.info("spotifySync episodeId={} postId={} score={} status=MATCHED", episode.id(), post.getId(), score);
+    }
+
+    private void logUnmatched(SpotifyEpisode episode, int bestScore) {
+        log.info("spotifySync episodeId={} title={} episodeNumber={} publishedAt={} bestScore={} status=UNMATCHED",
+                episode.id(), episode.title(), EpisodeNumberParser.parse(episode.title()), episode.releaseDate(), bestScore);
     }
 
     private boolean hasSpotifyLink(Post post) {

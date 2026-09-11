@@ -77,8 +77,9 @@ class UpdatePostServiceTest {
         String id = UUID.randomUUID().toString();
         when(loadPostPort.findById(id)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.execute(new UpdatePostUseCase.Input(
-                id, "Title", "title", null, null, null, "[]", "[]")))
+        UpdatePostUseCase.Input input = new UpdatePostUseCase.Input(
+                id, "Title", "title", null, null, null, "[]", "[]");
+        assertThatThrownBy(() -> service.execute(input))
                 .isInstanceOf(PostNotFoundException.class);
     }
 

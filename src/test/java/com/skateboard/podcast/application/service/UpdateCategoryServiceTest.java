@@ -62,7 +62,8 @@ class UpdateCategoryServiceTest {
         UUID id = UUID.randomUUID();
         when(categoryRepositoryPort.findById(id)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.execute(new UpdateCategoryUseCase.Input(id, "X")))
+        UpdateCategoryUseCase.Input input = new UpdateCategoryUseCase.Input(id, "X");
+        assertThatThrownBy(() -> service.execute(input))
                 .isInstanceOf(CategoryNotFoundException.class);
         verify(categoryRepositoryPort, never()).save(any());
     }
