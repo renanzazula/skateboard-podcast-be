@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.skateboard.application.dto.*;
 import com.skateboard.podcast.application.port.in.*;
 
+import com.skateboard.podcast.domain.model.Category;
 import com.skateboard.podcast.domain.model.Post;
 import com.skateboard.podcast.domain.model.PostStatus;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,6 +17,7 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -312,5 +314,260 @@ class PodcastServiceTest {
         assertThat(response.getExisting()).isEqualTo(3);
         assertThat(response.getCategoryChanges()).isEqualTo(1);
         assertThat(response.getSuccess()).isTrue();
+    }
+
+    @Test
+    void createPostAppliesExplicitStatusAndPublishAtAndNullBlocks() {
+        UUID createdBy = UUID.randomUUID();
+        Post post = Post.create("Scheduled Ep", "scheduled-ep", PostStatus.SCHEDULED,
+                Instant.parse("2026-03-01T00:00:00Z"), null, "[]", "[]", createdBy);
+        when(createPostUseCase.execute(any())).thenReturn(post);
+
+        CreatePostRequest req = new CreatePostRequest()
+                .title("Scheduled Ep")
+                .status(CreatePostRequest.StatusEnum.SCHEDULED)
+                .publishAt(OffsetDateTime.of(2026, 3, 1, 0, 0, 0, 0, ZoneOffset.UTC))
+                .blocks(null);
+
+        service.createPost(req, createdBy);
+
+        ArgumentCaptor<CreatePostUseCase.Input> captor =
+                ArgumentCaptor.forClass(CreatePostUseCase.Input.class);
+        verify(createPostUseCase).execute(captor.capture());
+        assertThat(captor.getValue().status()).isEqualTo(PostStatus.SCHEDULED);
+        assertThat(captor.getValue().publishAt()).isEqualTo(Instant.parse("2026-03-01T00:00:00Z"));
+        // blocks(null) -> blocksToJson's null-list branch still yields "[]"
+        assertThat(captor.getValue().blocksJson()).isEqualTo("[]");
+    }
+
+    @Test
+    void importPostsHandlesNullStatusAndNullPublishAt() {
+        UUID importedBy = UUID.randomUUID();
+        when(importPostsUseCase.execute(any()))
+                .thenReturn(new ImportPostsUseCase.Result(1, 0, List.of()));
+
+        service.importPosts(new ImportPostsRequest()
+                .posts(List.of(new ImportPostItem().title("No status").status(null))), importedBy);
+
+        ArgumentCaptor<ImportPostsUseCase.Input> captor =
+                ArgumentCaptor.forClass(ImportPostsUseCase.Input.class);
+        verify(importPostsUseCase).execute(captor.capture());
+        ImportPostsUseCase.PostImportItem item = captor.getValue().items().get(0);
+        assertThat(item.status()).isNull();
+        assertThat(item.publishAt()).isNull();
+    }
+
+    @Test
+    void updatePostAppliesExplicitStatusAndPublishAt() {
+        UUID id = UUID.randomUUID();
+        Post updated = Post.create("New Title", "new-title", PostStatus.SCHEDULED,
+                Instant.parse("2026-02-01T00:00:00Z"), "http://cover.png", "[]", "[]", null);
+        when(updatePostUseCase.execute(any())).thenReturn(updated);
+
+        UpdatePostRequest req = new UpdatePostRequest()
+                .title("New Title")
+                .coverUrl("http://cover.png")
+                .status(UpdatePostRequest.StatusEnum.SCHEDULED)
+                .publishAt(OffsetDateTime.of(2026, 2, 1, 0, 0, 0, 0, ZoneOffset.UTC));
+
+        PostResponse dto = service.updatePost(id, req);
+
+        ArgumentCaptor<UpdatePostUseCase.Input> captor =
+                ArgumentCaptor.forClass(UpdatePostUseCase.Input.class);
+        verify(updatePostUseCase).execute(captor.capture());
+        UpdatePostUseCase.Input input = captor.getValue();
+        assertThat(input.id()).isEqualTo(id.toString());
+        assertThat(input.slug()).isEqualTo("new-title");
+        assertThat(input.status()).isEqualTo(PostStatus.SCHEDULED);
+        assertThat(input.publishAt()).isEqualTo(Instant.parse("2026-02-01T00:00:00Z"));
+        assertThat(dto.getSlug()).isEqualTo("new-title");
+    }
+
+    @Test
+    void updatePostLeavesStatusAndPublishAtNullWhenOmitted() {
+        UUID id = UUID.randomUUID();
+        Post updated = Post.create("Title", "title", PostStatus.DRAFT, null, null, "[]", "[]", null);
+        when(updatePostUseCase.execute(any())).thenReturn(updated);
+
+        UpdatePostRequest req = new UpdatePostRequest().title("Title").coverUrl("http://cover.png");
+
+        service.updatePost(id, req);
+
+        ArgumentCaptor<UpdatePostUseCase.Input> captor =
+                ArgumentCaptor.forClass(UpdatePostUseCase.Input.class);
+        verify(updatePostUseCase).execute(captor.capture());
+        // Unlike create, omitted status/publishAt on update means "leave as-is" (null),
+        // not a default value -- UpdatePostService is the one that falls back.
+        assertThat(captor.getValue().status()).isNull();
+        assertThat(captor.getValue().publishAt()).isNull();
+    }
+
+    @Test
+    void getAdminCategoriesMapsAllFieldsIncludingCustomNameAndDisabled() {
+        Category category = Category.reconstitute(UUID.randomUUID(), "podcasts", "Podcasts",
+                "My Custom Name", null, "http://cover.png", "YOUTUBE", "PL1", false, 2, true, true,
+                Instant.now(), Instant.now());
+        when(getAdminCategoriesUseCase.execute())
+                .thenReturn(new GetAdminCategoriesUseCase.Result(List.of(
+                        new GetAdminCategoriesUseCase.CategoryWithCount(category, 7))));
+
+        List<AdminCategoryResponse> result = service.getAdminCategories();
+
+        assertThat(result).singleElement().satisfies(dto -> {
+            assertThat(dto.getSlug()).isEqualTo("podcasts");
+            assertThat(dto.getName()).isEqualTo("My Custom Name");
+            assertThat(dto.getYoutubeName()).isEqualTo("Podcasts");
+            assertThat(dto.getCustomName()).isEqualTo("My Custom Name");
+            assertThat(dto.getCoverUrl()).isEqualTo("http://cover.png");
+            assertThat(dto.getEnabled()).isFalse();
+            assertThat(dto.getDefault()).isTrue();
+            assertThat(dto.getDisplayOrder()).isEqualTo(2);
+            assertThat(dto.getPostCount()).isEqualTo(7L);
+        });
+    }
+
+    @Test
+    void updateCategoryDelegatesRenameAndMapsPostCountFromAdminList() {
+        UUID id = UUID.randomUUID();
+        Category renamed = Category.reconstitute(id, "podcasts", "Podcasts", "Renamed",
+                null, null, "YOUTUBE", "PL1", true, 0, false, false, Instant.now(), Instant.now());
+        when(updateCategoryUseCase.execute(new UpdateCategoryUseCase.Input(id, "Renamed")))
+                .thenReturn(renamed);
+        when(getAdminCategoriesUseCase.execute())
+                .thenReturn(new GetAdminCategoriesUseCase.Result(List.of(
+                        new GetAdminCategoriesUseCase.CategoryWithCount(renamed, 9))));
+
+        AdminCategoryResponse dto = service.updateCategory(id, new UpdateCategoryRequest().name("Renamed"));
+
+        assertThat(dto.getName()).isEqualTo("Renamed");
+        assertThat(dto.getPostCount()).isEqualTo(9L);
+    }
+
+    @Test
+    void updateCategoryDefaultsPostCountToZeroWhenCategoryMissingFromAdminList() {
+        UUID id = UUID.randomUUID();
+        Category renamed = Category.reconstitute(id, "podcasts", "Podcasts", null,
+                null, null, "YOUTUBE", "PL1", true, 0, false, false, Instant.now(), Instant.now());
+        when(updateCategoryUseCase.execute(any())).thenReturn(renamed);
+        when(getAdminCategoriesUseCase.execute())
+                .thenReturn(new GetAdminCategoriesUseCase.Result(List.of()));
+
+        AdminCategoryResponse dto = service.updateCategory(id, new UpdateCategoryRequest());
+
+        assertThat(dto.getPostCount()).isEqualTo(0L);
+    }
+
+    @Test
+    void reorderCategoriesDelegatesAndMapsPostCountsPerCategory() {
+        UUID id1 = UUID.randomUUID();
+        UUID id2 = UUID.randomUUID();
+        Category cat1 = Category.reconstitute(id1, "podcasts", "Podcasts", null, null, null,
+                "YOUTUBE", "PL1", true, 0, true, true, Instant.now(), Instant.now());
+        Category cat2 = Category.reconstitute(id2, "events", "Events", null, null, null,
+                "YOUTUBE", "PL2", true, 1, false, false, Instant.now(), Instant.now());
+        when(getAdminCategoriesUseCase.execute())
+                .thenReturn(new GetAdminCategoriesUseCase.Result(List.of(
+                        new GetAdminCategoriesUseCase.CategoryWithCount(cat1, 3),
+                        new GetAdminCategoriesUseCase.CategoryWithCount(cat2, 5))));
+        when(reorderCategoriesUseCase.execute(new ReorderCategoriesUseCase.Input(List.of(id2, id1))))
+                .thenReturn(new ReorderCategoriesUseCase.Result(List.of(cat2, cat1)));
+
+        List<AdminCategoryResponse> result = service.reorderCategories(
+                new ReorderCategoriesRequest(List.of(id2, id1)));
+
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).getSlug()).isEqualTo("events");
+        assertThat(result.get(0).getPostCount()).isEqualTo(5L);
+        assertThat(result.get(1).getSlug()).isEqualTo("podcasts");
+        assertThat(result.get(1).getPostCount()).isEqualTo(3L);
+    }
+
+    @Test
+    void setDefaultCategoryDelegatesAndMapsPostCount() {
+        UUID id = UUID.randomUUID();
+        Category defaulted = Category.reconstitute(id, "podcasts", "Podcasts", null, null, null,
+                "YOUTUBE", "PL1", true, 0, true, true, Instant.now(), Instant.now());
+        when(setDefaultCategoryUseCase.execute(id)).thenReturn(defaulted);
+        when(getAdminCategoriesUseCase.execute())
+                .thenReturn(new GetAdminCategoriesUseCase.Result(List.of(
+                        new GetAdminCategoriesUseCase.CategoryWithCount(defaulted, 4))));
+
+        AdminCategoryResponse dto = service.setDefaultCategory(id);
+
+        assertThat(dto.getDefault()).isTrue();
+        assertThat(dto.getPostCount()).isEqualTo(4L);
+    }
+
+    /** A block value Jackson cannot serialize (getter always throws), to exercise blocksToJson's catch branch. */
+    public static class ThrowingBean {
+        public String getValue() {
+            throw new IllegalStateException("boom");
+        }
+    }
+
+    /** A SocialMediaLink whose getter always throws, to exercise socialLinksToJson's catch branch. */
+    private static final class ThrowingSocialMediaLink extends SocialMediaLink {
+        @Override
+        public String getUrl() {
+            throw new IllegalStateException("boom");
+        }
+    }
+
+    @Test
+    void blocksToJsonFallsBackToEmptyArrayWhenSerializationFails() {
+        UUID createdBy = UUID.randomUUID();
+        when(createPostUseCase.execute(any()))
+                .thenReturn(Post.create("Ep", "ep", PostStatus.PUBLISHED, null, null, "[]", "[]", createdBy));
+
+        CreatePostRequest req = new CreatePostRequest()
+                .title("Ep")
+                .blocks(List.of(Map.of("bad", new ThrowingBean())));
+
+        service.createPost(req, createdBy);
+
+        ArgumentCaptor<CreatePostUseCase.Input> captor =
+                ArgumentCaptor.forClass(CreatePostUseCase.Input.class);
+        verify(createPostUseCase).execute(captor.capture());
+        assertThat(captor.getValue().blocksJson()).isEqualTo("[]");
+    }
+
+    @Test
+    void socialLinksToJsonFallsBackToEmptyArrayWhenSerializationFails() {
+        UUID createdBy = UUID.randomUUID();
+        when(createPostUseCase.execute(any()))
+                .thenReturn(Post.create("Ep", "ep", PostStatus.PUBLISHED, null, null, "[]", "[]", createdBy));
+
+        CreatePostRequest req = new CreatePostRequest()
+                .title("Ep")
+                .socialMediaLinks(List.of(new ThrowingSocialMediaLink().platform("youtube")));
+
+        service.createPost(req, createdBy);
+
+        ArgumentCaptor<CreatePostUseCase.Input> captor =
+                ArgumentCaptor.forClass(CreatePostUseCase.Input.class);
+        verify(createPostUseCase).execute(captor.capture());
+        assertThat(captor.getValue().socialMediaLinksJson()).isEqualTo("[]");
+    }
+
+    @Test
+    void parseBlocksFallsBackToEmptyListWhenStoredJsonIsMalformed() {
+        Post post = Post.create("Ep", "ep", PostStatus.PUBLISHED, null, null,
+                "{not-valid-json", "[]", null);
+        when(getPostBySlugUseCase.execute("ep")).thenReturn(Optional.of(post));
+
+        PostResponse dto = service.getPostBySlug("ep");
+
+        assertThat(dto.getBlocks()).isEmpty();
+    }
+
+    @Test
+    void parseSocialLinksFallsBackToEmptyListWhenStoredJsonIsMalformed() {
+        Post post = Post.create("Ep", "ep", PostStatus.PUBLISHED, null, null,
+                "[]", "{not-valid-json", null);
+        when(getPostBySlugUseCase.execute("ep")).thenReturn(Optional.of(post));
+
+        PostResponse dto = service.getPostBySlug("ep");
+
+        assertThat(dto.getSocialMediaLinks()).isEmpty();
     }
 }

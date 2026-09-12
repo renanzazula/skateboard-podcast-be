@@ -23,7 +23,7 @@ public class AudienceValidator implements OAuth2TokenValidator<Jwt> {
 
     @Override
     public OAuth2TokenValidatorResult validate(Jwt jwt) {
-        if (jwt.getAudience().contains(requiredAudience)) {
+        if (jwt.getAudience() != null && jwt.getAudience().contains(requiredAudience)) {
             return OAuth2TokenValidatorResult.success();
         }
         return OAuth2TokenValidatorResult.failure(INVALID_AUDIENCE);
