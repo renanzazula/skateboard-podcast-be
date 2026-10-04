@@ -3,6 +3,7 @@ package com.skateboard.podcast.infrastructure.web;
 import com.skateboard.application.dto.ErrorResponse;
 import com.skateboard.podcast.domain.exception.CategoryNotFoundException;
 import com.skateboard.podcast.domain.exception.PostNotFoundException;
+import jakarta.validation.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpStatus;
@@ -15,6 +16,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.lang.reflect.Method;
+
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -38,6 +41,17 @@ class GlobalExceptionHandlerTest {
         assertThat(response.getBody().getError()).isEqualTo("Forbidden");
         assertThat(response.getBody().getMessage()).isEqualTo("Access denied");
         assertThat(response.getBody().getTimestamp()).isNotNull();
+    }
+
+    @Test
+    void mapsAQueryParameterConstraintViolationTo400() {
+        // e.g. ?search= longer than the spec's maxLength
+        ResponseEntity<ErrorResponse> response =
+                handler.handleParameterValidation(new ConstraintViolationException("search: size must be <= 100", Set.of()));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getMessage()).isEqualTo("Invalid request parameter");
     }
 
     @Test

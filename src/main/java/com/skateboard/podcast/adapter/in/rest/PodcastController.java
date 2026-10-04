@@ -101,10 +101,10 @@ public class PodcastController implements PodcastApi {
 
     @Override
     @PreAuthorize("hasAuthority('FUNC_TAB_PODCAST')")
-    public ResponseEntity<FeedPageResponse> getCategoryPosts(String slug, Integer page, Integer size) {
+    public ResponseEntity<FeedPageResponse> getCategoryPosts(String slug, Integer page, Integer size, String search) {
         int p = page != null ? page : 0;
         int s = size != null ? Math.min(size, 50) : 10;
-        return ResponseEntity.ok(podcastService.getPostsByCategory(slug, p, s));
+        return ResponseEntity.ok(podcastService.getPostsByCategory(slug, search, p, s));
     }
 
     @Override

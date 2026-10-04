@@ -232,6 +232,18 @@ this service owns is the one piece AUTO mode needs: **which post is the latest o
   cached) and evicted by the existing blanket `@CacheEvict(allEntries = true)` on every post mutation — no
   new eviction logic needed.
 
+## Episode search (`?search=` on `/api/podcast` and `/api/categories/{slug}/posts`)
+
+Both feeds take the same optional `search` (spec `maxLength: 100`), parsed once by the domain value object
+`EpisodeSearch`: always a case-insensitive "title contains", plus — when the *whole* value reads as an episode
+number (`42`, `#42`, `ep 42`, `episode 42`) — an exact `episode_number` match, which the query sorts first
+(`ORDER BY CASE ... , publishAt DESC NULLS LAST, id`), so "42" lists #42 above #142/#420. `EpisodeSearchParams`
+LIKE-escapes `%`/`_`/`\` and binds `-1` (never a real episode) when there's no number, rather than a typed null.
+`episode_number` is only populated by the YouTube sync (`EpisodeNumberParser`); manually created posts match by
+title only. **Searched pages are never cached** (`condition` on both `@Cacheable`s): free-text keys would bloat
+Redis and could be crafted to collide with another read's key. `EpisodeSearchPersistenceIntegrationTest`
+(Testcontainers) is what proves the JPQL against real Postgres.
+
 ## Auth model
 
 `infrastructure/security/SecurityConfig` is an OAuth2 resource server validating access tokens issued by the

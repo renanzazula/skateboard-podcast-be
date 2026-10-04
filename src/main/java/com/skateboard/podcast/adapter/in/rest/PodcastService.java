@@ -82,7 +82,13 @@ public class PodcastService {
 
     // ── Reads (cached) ──────────────────────────────────────────────────────
 
-    @Cacheable(cacheNames = POST_CACHE, key = "(#search != null ? #search : '') + ':' + #page + ':' + #size", sync = true)
+    // Only the unfiltered feed is cached. Search terms are free text typed by
+    // every listener, so caching them would grow the cache (Redis, 24h TTL)
+    // with one-off keys, and a raw term inside the key could be crafted to
+    // collide with another read's key (e.g. "category:podcasts" landing on
+    // the category feed's entry). The search query itself is cheap.
+    @Cacheable(cacheNames = POST_CACHE, key = "'feed:' + #page + ':' + #size", sync = true,
+            condition = "#search == null || #search.isBlank()")
     public FeedPageResponse getPost(String search, int page, int size) {
         GetPostUseCase.Result result = getPostUseCase.execute(search, page, size);
         return new FeedPageResponse()
@@ -134,9 +140,11 @@ public class PodcastService {
     }
 
     /** @throws com.skateboard.podcast.domain.exception.CategoryNotFoundException mapped to 404 by GlobalExceptionHandler. */
-    @Cacheable(cacheNames = POST_CACHE, key = "'category:' + #slug + ':' + #page + ':' + #size", sync = true)
-    public FeedPageResponse getPostsByCategory(String slug, int page, int size) {
-        GetPostsByCategoryUseCase.Result result = getPostsByCategoryUseCase.execute(slug, page, size);
+    // Same rule as getPost: a searched category page is never cached.
+    @Cacheable(cacheNames = POST_CACHE, key = "'category:' + #slug + ':' + #page + ':' + #size", sync = true,
+            condition = "#search == null || #search.isBlank()")
+    public FeedPageResponse getPostsByCategory(String slug, String search, int page, int size) {
+        GetPostsByCategoryUseCase.Result result = getPostsByCategoryUseCase.execute(slug, search, page, size);
         return new FeedPageResponse()
                 .posts(result.posts().stream().map(this::toDto).toList())
                 .total(result.total())

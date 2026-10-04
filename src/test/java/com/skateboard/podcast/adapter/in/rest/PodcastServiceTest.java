@@ -274,10 +274,10 @@ class PodcastServiceTest {
     @Test
     void getPostsByCategoryMapsResultToFeedPage() {
         Post post = Post.create("Ep", "ep", PostStatus.PUBLISHED, null, null, "[]", "[]", null);
-        when(getPostsByCategoryUseCase.execute("podcasts", 0, 10))
+        when(getPostsByCategoryUseCase.execute("podcasts", "42", 0, 10))
                 .thenReturn(new GetPostsByCategoryUseCase.Result(List.of(post), 1));
 
-        FeedPageResponse response = service.getPostsByCategory("podcasts", 0, 10);
+        FeedPageResponse response = service.getPostsByCategory("podcasts", "42", 0, 10);
 
         assertThat(response.getTotal()).isEqualTo(1);
         assertThat(response.getPosts()).hasSize(1);

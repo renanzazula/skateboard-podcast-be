@@ -4,6 +4,7 @@ import com.skateboard.podcast.application.port.in.GetPostsByCategoryUseCase;
 import com.skateboard.podcast.application.port.out.CategoryRepositoryPort;
 import com.skateboard.podcast.application.port.out.PostCategoryPort;
 import com.skateboard.podcast.domain.exception.CategoryNotFoundException;
+import com.skateboard.podcast.domain.model.EpisodeSearch;
 import com.skateboard.podcast.domain.model.Post;
 import org.springframework.stereotype.Service;
 
@@ -21,10 +22,17 @@ public class GetPostsByCategoryService implements GetPostsByCategoryUseCase {
     }
 
     @Override
-    public Result execute(String slug, int page, int size) {
+    public Result execute(String slug, String search, int page, int size) {
         categoryRepositoryPort.findBySlug(slug)
                 .filter(c -> c.isEnabled())
                 .orElseThrow(() -> new CategoryNotFoundException(slug));
+
+        EpisodeSearch query = EpisodeSearch.parse(search);
+        if (query != null) {
+            List<Post> posts = postCategoryPort.searchPublishedByCategorySlug(slug, query, page, size);
+            long total = postCategoryPort.countSearchPublishedByCategorySlug(slug, query);
+            return new Result(posts, total);
+        }
 
         List<Post> posts = postCategoryPort.findPublishedByCategorySlug(slug, page, size);
         long total = postCategoryPort.countPublishedByCategorySlug(slug);

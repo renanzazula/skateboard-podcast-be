@@ -1,6 +1,7 @@
 package com.skateboard.podcast.adapter.out.persistence;
 
 import com.skateboard.podcast.domain.model.Category;
+import com.skateboard.podcast.domain.model.EpisodeSearch;
 import com.skateboard.podcast.domain.model.Post;
 import com.skateboard.podcast.domain.model.PostStatus;
 import org.junit.jupiter.api.BeforeEach;
@@ -314,6 +315,29 @@ class CategoryPersistenceAdapterTest {
         when(postCategoryRepository.countByCategorySlugAndStatus("podcasts", PostStatus.PUBLISHED.name())).thenReturn(7L);
 
         assertThat(adapter.countPublishedByCategorySlug("podcasts")).isEqualTo(7L);
+    }
+
+    // ── searchPublishedByCategorySlug / countSearchPublishedByCategorySlug ──
+
+    @Test
+    void searchPublishedByCategorySlugBindsEscapedPatternAndEpisodeNumber() {
+        UUID id = UUID.randomUUID();
+        when(postCategoryRepository.searchByCategorySlugAndStatus("podcasts", PostStatus.PUBLISHED.name(),
+                "%ep 42%", 42, PageRequest.of(1, 10)))
+                .thenReturn(List.of(postEntity(id, "ep-42")));
+        when(platformLinkRepository.findByPostIdIn(List.of(id))).thenReturn(List.of());
+
+        List<Post> result = adapter.searchPublishedByCategorySlug("podcasts", EpisodeSearch.parse("EP 42"), 1, 10);
+
+        assertThat(result).singleElement().satisfies(p -> assertThat(p.getSlug()).isEqualTo("ep-42"));
+    }
+
+    @Test
+    void countSearchPublishedByCategorySlugUsesTheNoEpisodeSentinelForTextSearches() {
+        when(postCategoryRepository.countSearchByCategorySlugAndStatus("podcasts", PostStatus.PUBLISHED.name(),
+                "%100\\%%", -1)).thenReturn(3L);
+
+        assertThat(adapter.countSearchPublishedByCategorySlug("podcasts", EpisodeSearch.parse("100%"))).isEqualTo(3L);
     }
 
     // ── countPublishedByCategory ─────────────────────────────────────────────

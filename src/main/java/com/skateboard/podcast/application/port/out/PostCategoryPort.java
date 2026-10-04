@@ -1,5 +1,6 @@
 package com.skateboard.podcast.application.port.out;
 
+import com.skateboard.podcast.domain.model.EpisodeSearch;
 import com.skateboard.podcast.domain.model.Post;
 
 import java.util.List;
@@ -15,6 +16,9 @@ public interface PostCategoryPort {
     /** Published posts in the category, ordered COALESCE(publishAt, createdAt) DESC. */
     List<Post> findPublishedByCategorySlug(String slug, int page, int size);
     long countPublishedByCategorySlug(String slug);
+    /** {@link #findPublishedByCategorySlug} narrowed to posts matching the search, exact episode first. */
+    List<Post> searchPublishedByCategorySlug(String slug, EpisodeSearch search, int page, int size);
+    long countSearchPublishedByCategorySlug(String slug, EpisodeSearch search);
     /** Published post count per category id, for GetCategoriesUseCase. */
     Map<UUID, Long> countPublishedByCategory();
 }

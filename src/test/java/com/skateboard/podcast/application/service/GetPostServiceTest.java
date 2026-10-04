@@ -2,6 +2,7 @@ package com.skateboard.podcast.application.service;
 
 import com.skateboard.podcast.application.port.in.GetPostUseCase;
 import com.skateboard.podcast.application.port.out.LoadPostPort;
+import com.skateboard.podcast.domain.model.EpisodeSearch;
 import com.skateboard.podcast.domain.model.Post;
 import com.skateboard.podcast.domain.model.PostStatus;
 import org.junit.jupiter.api.BeforeEach;
@@ -64,10 +65,11 @@ class GetPostServiceTest {
     @Test
     void nonBlankSearchDelegatesToSearchPublished() {
         List<Post> posts = List.of(post("Skateboard Podcast #70"));
-        when(loadPostPort.searchPublished("skate", 0, 10)).thenReturn(posts);
-        when(loadPostPort.countSearchPublished("skate")).thenReturn(1L);
+        EpisodeSearch expected = new EpisodeSearch("skate", null);
+        when(loadPostPort.searchPublished(expected, 0, 10)).thenReturn(posts);
+        when(loadPostPort.countSearchPublished(expected)).thenReturn(1L);
 
-        GetPostUseCase.Result result = service.execute("skate", 0, 10);
+        GetPostUseCase.Result result = service.execute("  Skate ", 0, 10);
 
         assertThat(result.posts()).isEqualTo(posts);
         assertThat(result.total()).isEqualTo(1L);

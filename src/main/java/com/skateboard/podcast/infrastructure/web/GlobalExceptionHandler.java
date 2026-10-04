@@ -4,6 +4,7 @@ import com.skateboard.application.dto.ErrorResponse;
 import com.skateboard.podcast.domain.exception.CategoryNotFoundException;
 import com.skateboard.podcast.domain.exception.PostNotFoundException;
 
+import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -12,6 +13,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.time.OffsetDateTime;
@@ -59,6 +61,15 @@ public class GlobalExceptionHandler {
                 .map(fieldError -> fieldError.getField() + " " + fieldError.getDefaultMessage())
                 .orElse("Invalid request");
         return buildResponse(HttpStatus.BAD_REQUEST, message);
+    }
+
+    // A failed constraint on a query/path parameter (e.g. search over its
+    // spec maxLength). The generated interfaces are @Validated, so depending on
+    // whether the controller is proxied this arrives as either type — both are
+    // the caller's mistake, not a 500.
+    @ExceptionHandler({ConstraintViolationException.class, HandlerMethodValidationException.class})
+    public ResponseEntity<ErrorResponse> handleParameterValidation(Exception ex) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "Invalid request parameter");
     }
 
     @ExceptionHandler(Exception.class)
