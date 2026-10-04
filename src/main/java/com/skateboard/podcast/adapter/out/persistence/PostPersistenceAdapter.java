@@ -2,6 +2,7 @@ package com.skateboard.podcast.adapter.out.persistence;
 
 import com.skateboard.podcast.application.port.out.LoadPostPort;
 import com.skateboard.podcast.application.port.out.SavePostPort;
+import com.skateboard.podcast.domain.model.EpisodeSearch;
 import com.skateboard.podcast.domain.model.Post;
 import com.skateboard.podcast.domain.model.PostPlatform;
 import com.skateboard.podcast.domain.model.PostPlatformLink;
@@ -77,20 +78,22 @@ public class PostPersistenceAdapter implements LoadPostPort, SavePostPort {
     }
 
     @Override
-    public List<Post> searchPublished(String query, int page, int size) {
+    public List<Post> searchPublished(EpisodeSearch search, int page, int size) {
         PageRequest pageable = PageRequest.of(page, size);
         List<PostJpaEntity> entities = jpaRepository
-                .searchByStatusAndTitle(PostStatus.PUBLISHED.name(), query, pageable)
+                .searchByStatus(PostStatus.PUBLISHED.name(), EpisodeSearchParams.likePattern(search),
+                        EpisodeSearchParams.episodeNumber(search), pageable)
                 .getContent();
         return toDomainWithLinks(entities);
     }
 
     @Override
-    public long countSearchPublished(String query) {
+    public long countSearchPublished(EpisodeSearch search) {
         // @Query-backed Page methods derive their count from a separate
         // COUNT query, so this doesn't load the matching rows themselves —
         // the page size here only bounds the (unused) content list.
-        return jpaRepository.searchByStatusAndTitle(PostStatus.PUBLISHED.name(), query, PageRequest.of(0, 1)).getTotalElements();
+        return jpaRepository.searchByStatus(PostStatus.PUBLISHED.name(), EpisodeSearchParams.likePattern(search),
+                EpisodeSearchParams.episodeNumber(search), PageRequest.of(0, 1)).getTotalElements();
     }
 
     @Override

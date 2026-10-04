@@ -161,15 +161,44 @@ class PodcastServiceCachingTest {
 
     @Test
     void categoryPostsAreCachedPerSlugPageAndSize() {
-        when(getPostsByCategoryUseCase.execute(anyString(), anyInt(), anyInt()))
+        when(getPostsByCategoryUseCase.execute(anyString(), any(), anyInt(), anyInt()))
                 .thenReturn(new GetPostsByCategoryUseCase.Result(List.of(), 0));
 
-        service.getPostsByCategory("podcasts", 0, 10);
-        service.getPostsByCategory("podcasts", 0, 10);
-        verify(getPostsByCategoryUseCase, times(1)).execute("podcasts", 0, 10);
+        service.getPostsByCategory("podcasts", null, 0, 10);
+        service.getPostsByCategory("podcasts", null, 0, 10);
+        verify(getPostsByCategoryUseCase, times(1)).execute("podcasts", null, 0, 10);
 
-        service.getPostsByCategory("events", 0, 10);
-        verify(getPostsByCategoryUseCase, times(1)).execute("events", 0, 10);
+        service.getPostsByCategory("events", null, 0, 10);
+        verify(getPostsByCategoryUseCase, times(1)).execute("events", null, 0, 10);
+    }
+
+    @Test
+    void searchedCategoryPostsAreNeverCached() {
+        when(getPostsByCategoryUseCase.execute(anyString(), any(), anyInt(), anyInt()))
+                .thenReturn(new GetPostsByCategoryUseCase.Result(List.of(), 0));
+
+        service.getPostsByCategory("podcasts", "42", 0, 10);
+        service.getPostsByCategory("podcasts", "42", 0, 10);
+        verify(getPostsByCategoryUseCase, times(2)).execute("podcasts", "42", 0, 10);
+
+        // ...and a search never serves (or overwrites) the unfiltered entry.
+        service.getPostsByCategory("podcasts", null, 0, 10);
+        verify(getPostsByCategoryUseCase, times(1)).execute("podcasts", null, 0, 10);
+    }
+
+    @Test
+    void searchedFeedIsNeverCachedAndCannotCollideWithACategoryKey() {
+        when(getPostsByCategoryUseCase.execute(anyString(), any(), anyInt(), anyInt()))
+                .thenReturn(new GetPostsByCategoryUseCase.Result(List.of(), 0));
+        service.getPostsByCategory("podcasts", null, 0, 10);
+
+        // Under the old key scheme this term produced "category:podcasts:0:10".
+        service.getPost("category:podcasts", 0, 10);
+        service.getPost("category:podcasts", 0, 10);
+        verify(getPostUseCase, times(2)).execute("category:podcasts", 0, 10);
+
+        service.getPostsByCategory("podcasts", null, 0, 10);
+        verify(getPostsByCategoryUseCase, times(1)).execute("podcasts", null, 0, 10);
     }
 
     @Test

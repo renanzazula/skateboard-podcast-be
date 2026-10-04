@@ -1,5 +1,6 @@
 package com.skateboard.podcast.application.port.out;
 
+import com.skateboard.podcast.domain.model.EpisodeSearch;
 import com.skateboard.podcast.domain.model.Post;
 
 import java.util.List;
@@ -11,8 +12,9 @@ public interface LoadPostPort {
     Optional<Post> findByYoutubeVideoId(String youtubeVideoId);
     List<Post> findPublished(int page, int size);
     long countPublished();
-    List<Post> searchPublished(String query, int page, int size);
-    long countSearchPublished(String query);
+    /** Published posts matching the search (title contains, or exact episode number), exact episode first. */
+    List<Post> searchPublished(EpisodeSearch search, int page, int size);
+    long countSearchPublished(EpisodeSearch search);
     List<Post> findAll(int page, int size);
     long countAll();
     boolean existsBySlug(String slug);

@@ -8,6 +8,11 @@ public interface GetPostsByCategoryUseCase {
 
     record Result(List<Post> posts, long total) {}
 
-    /** @throws com.skateboard.podcast.domain.exception.CategoryNotFoundException if the slug doesn't match an enabled category. */
-    Result execute(String slug, int page, int size);
+    /**
+     * @param search optional title / episode-number filter (see
+     *               {@link com.skateboard.podcast.domain.model.EpisodeSearch});
+     *               null or blank returns the whole category
+     * @throws com.skateboard.podcast.domain.exception.CategoryNotFoundException if the slug doesn't match an enabled category.
+     */
+    Result execute(String slug, String search, int page, int size);
 }

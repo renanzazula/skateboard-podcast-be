@@ -25,10 +25,21 @@ public interface SpringPostRepository extends JpaRepository<PostJpaEntity, UUID>
            "ORDER BY p.publishAt DESC NULLS LAST, p.id")
     Page<PostJpaEntity> findByStatusOrderByEffectivePublishDate(@Param("status") String status, Pageable pageable);
 
-    @Query("SELECT p FROM PostJpaEntity p WHERE p.status = :status " +
-           "AND LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%')) " +
-           "ORDER BY p.publishAt DESC NULLS LAST, p.id")
-    Page<PostJpaEntity> searchByStatusAndTitle(@Param("status") String status, @Param("query") String query, Pageable pageable);
+    // Episode search: title contains :pattern (already lower-cased and
+    // LIKE-escaped by EpisodeSearchParams) OR the exact episode number. The
+    // exact episode sorts first so "42" puts #42 above #142/#420; otherwise the
+    // feed's usual publish-date order. countQuery is explicit because the
+    // derived one would carry the CASE ordering's parameter along.
+    @Query(value = "SELECT p FROM PostJpaEntity p WHERE p.status = :status " +
+                   "AND (LOWER(p.title) LIKE :pattern ESCAPE '\\' OR p.episodeNumber = :episodeNumber) " +
+                   "ORDER BY CASE WHEN p.episodeNumber = :episodeNumber THEN 0 ELSE 1 END, " +
+                   "p.publishAt DESC NULLS LAST, p.id",
+           countQuery = "SELECT COUNT(p) FROM PostJpaEntity p WHERE p.status = :status " +
+                        "AND (LOWER(p.title) LIKE :pattern ESCAPE '\\' OR p.episodeNumber = :episodeNumber)")
+    Page<PostJpaEntity> searchByStatus(@Param("status") String status,
+                                       @Param("pattern") String pattern,
+                                       @Param("episodeNumber") int episodeNumber,
+                                       Pageable pageable);
 
     // Posts that were published but whose PODCAST_PUBLISHED event never reached
     // the broker. Bounded by publishAt as well as by notified_at so the query

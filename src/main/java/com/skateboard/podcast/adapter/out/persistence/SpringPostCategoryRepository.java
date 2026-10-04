@@ -41,6 +41,31 @@ public interface SpringPostCategoryRepository extends JpaRepository<PostCategory
            "WHERE c.slug = :slug AND po.status = :status")
     long countByCategorySlugAndStatus(@Param("slug") String slug, @Param("status") String status);
 
+    // Same matching and ordering as SpringPostRepository.searchByStatus, scoped
+    // to one category.
+    @Query("SELECT po FROM PostJpaEntity po " +
+           "JOIN PostCategoryJpaEntity pc ON pc.postId = po.id " +
+           "JOIN CategoryJpaEntity c ON c.id = pc.categoryId " +
+           "WHERE c.slug = :slug AND po.status = :status " +
+           "AND (LOWER(po.title) LIKE :pattern ESCAPE '\\' OR po.episodeNumber = :episodeNumber) " +
+           "ORDER BY CASE WHEN po.episodeNumber = :episodeNumber THEN 0 ELSE 1 END, " +
+           "po.publishAt DESC NULLS LAST, po.id")
+    List<PostJpaEntity> searchByCategorySlugAndStatus(@Param("slug") String slug,
+                                                      @Param("status") String status,
+                                                      @Param("pattern") String pattern,
+                                                      @Param("episodeNumber") int episodeNumber,
+                                                      Pageable pageable);
+
+    @Query("SELECT COUNT(po) FROM PostJpaEntity po " +
+           "JOIN PostCategoryJpaEntity pc ON pc.postId = po.id " +
+           "JOIN CategoryJpaEntity c ON c.id = pc.categoryId " +
+           "WHERE c.slug = :slug AND po.status = :status " +
+           "AND (LOWER(po.title) LIKE :pattern ESCAPE '\\' OR po.episodeNumber = :episodeNumber)")
+    long countSearchByCategorySlugAndStatus(@Param("slug") String slug,
+                                            @Param("status") String status,
+                                            @Param("pattern") String pattern,
+                                            @Param("episodeNumber") int episodeNumber);
+
     @Query("SELECT pc.categoryId AS categoryId, COUNT(po) AS postCount FROM PostJpaEntity po " +
            "JOIN PostCategoryJpaEntity pc ON pc.postId = po.id " +
            "WHERE po.status = :status " +

@@ -283,22 +283,22 @@ class PodcastControllerTest {
     @Test
     void getCategoryPostsDefaultsPageAndClampsSize() {
         FeedPageResponse expected = new FeedPageResponse();
-        when(podcastService.getPostsByCategory("podcasts", 0, 50)).thenReturn(expected);
+        when(podcastService.getPostsByCategory("podcasts", null, 0, 50)).thenReturn(expected);
 
-        ResponseEntity<FeedPageResponse> response = controller.getCategoryPosts("podcasts", null, 1000);
+        ResponseEntity<FeedPageResponse> response = controller.getCategoryPosts("podcasts", null, 1000, null);
 
         assertThat(response.getBody()).isSameAs(expected);
-        verify(podcastService).getPostsByCategory("podcasts", 0, 50);
+        verify(podcastService).getPostsByCategory("podcasts", null, 0, 50);
     }
 
     @Test
     void getCategoryPostsPassesThroughValidPageAndSize() {
         FeedPageResponse expected = new FeedPageResponse();
-        when(podcastService.getPostsByCategory("events", 1, 5)).thenReturn(expected);
+        when(podcastService.getPostsByCategory("events", "skate", 1, 5)).thenReturn(expected);
 
-        controller.getCategoryPosts("events", 1, 5);
+        controller.getCategoryPosts("events", 1, 5, "skate");
 
-        verify(podcastService).getPostsByCategory("events", 1, 5);
+        verify(podcastService).getPostsByCategory("events", "skate", 1, 5);
     }
 
     // ── admin categories ─────────────────────────────────────────────────────

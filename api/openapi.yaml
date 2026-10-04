@@ -36,8 +36,12 @@ paths:
           schema: { type: integer, default: 10 }
         - name: search
           in: query
-          description: Case-insensitive title filter (used by the Home Featured Player episode picker)
-          schema: { type: string }
+          description: >-
+            Episode search (used by the Home Featured Player episode picker).
+            Case-insensitive partial match on the title; when the whole value is
+            an episode number (`42`, `#42`, `ep 42`, `episode 42`) it also matches
+            that exact episode, which is listed first. Blank means no filter.
+          schema: { type: string, maxLength: 100 }
       responses:
         '200':
           description: Podcast feed page
@@ -397,6 +401,14 @@ paths:
         - name: size
           in: query
           schema: { type: integer, default: 10 }
+        - name: search
+          in: query
+          description: >-
+            Episode search within the category (Podcast list search field).
+            Case-insensitive partial match on the title; when the whole value is
+            an episode number (`42`, `#42`, `ep 42`, `episode 42`) it also matches
+            that exact episode, which is listed first. Blank means no filter.
+          schema: { type: string, maxLength: 100 }
       responses:
         '200':
           description: Category feed page

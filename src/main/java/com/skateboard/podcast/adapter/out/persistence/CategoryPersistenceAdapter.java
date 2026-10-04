@@ -3,6 +3,7 @@ package com.skateboard.podcast.adapter.out.persistence;
 import com.skateboard.podcast.application.port.out.CategoryRepositoryPort;
 import com.skateboard.podcast.application.port.out.PostCategoryPort;
 import com.skateboard.podcast.domain.model.Category;
+import com.skateboard.podcast.domain.model.EpisodeSearch;
 import com.skateboard.podcast.domain.model.Post;
 import com.skateboard.podcast.domain.model.PostPlatform;
 import com.skateboard.podcast.domain.model.PostPlatformLink;
@@ -84,9 +85,30 @@ public class CategoryPersistenceAdapter implements CategoryRepositoryPort, PostC
 
     @Override
     public List<Post> findPublishedByCategorySlug(String slug, int page, int size) {
-        List<PostJpaEntity> entities = postCategoryRepository
+        return withLinks(postCategoryRepository
                 .findByCategorySlugAndStatus(slug, PostStatus.PUBLISHED.name(), PageRequest.of(page, size))
-                .getContent();
+                .getContent());
+    }
+
+    @Override
+    public long countPublishedByCategorySlug(String slug) {
+        return postCategoryRepository.countByCategorySlugAndStatus(slug, PostStatus.PUBLISHED.name());
+    }
+
+    @Override
+    public List<Post> searchPublishedByCategorySlug(String slug, EpisodeSearch search, int page, int size) {
+        return withLinks(postCategoryRepository.searchByCategorySlugAndStatus(slug, PostStatus.PUBLISHED.name(),
+                EpisodeSearchParams.likePattern(search), EpisodeSearchParams.episodeNumber(search),
+                PageRequest.of(page, size)));
+    }
+
+    @Override
+    public long countSearchPublishedByCategorySlug(String slug, EpisodeSearch search) {
+        return postCategoryRepository.countSearchByCategorySlugAndStatus(slug, PostStatus.PUBLISHED.name(),
+                EpisodeSearchParams.likePattern(search), EpisodeSearchParams.episodeNumber(search));
+    }
+
+    private List<Post> withLinks(List<PostJpaEntity> entities) {
         List<UUID> postIds = entities.stream().map(PostJpaEntity::getId).toList();
         Map<UUID, List<PostPlatformLink>> linksByPostId = postIds.isEmpty() ? Map.of()
                 : platformLinkRepository.findByPostIdIn(postIds).stream()
@@ -95,11 +117,6 @@ public class CategoryPersistenceAdapter implements CategoryRepositoryPort, PostC
         return entities.stream()
                 .map(e -> toDomainPost(e, linksByPostId.getOrDefault(e.getId(), List.of())))
                 .toList();
-    }
-
-    @Override
-    public long countPublishedByCategorySlug(String slug) {
-        return postCategoryRepository.countByCategorySlugAndStatus(slug, PostStatus.PUBLISHED.name());
     }
 
     @Override

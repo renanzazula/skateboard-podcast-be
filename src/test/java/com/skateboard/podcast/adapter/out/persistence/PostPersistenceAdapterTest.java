@@ -1,5 +1,6 @@
 package com.skateboard.podcast.adapter.out.persistence;
 
+import com.skateboard.podcast.domain.model.EpisodeSearch;
 import com.skateboard.podcast.domain.model.Post;
 import com.skateboard.podcast.domain.model.PostPlatform;
 import com.skateboard.podcast.domain.model.PostPlatformLink;
@@ -273,11 +274,11 @@ class PostPersistenceAdapterTest {
     @Test
     void searchPublishedMapsEntitiesWithLinks() {
         UUID id = UUID.randomUUID();
-        when(jpaRepository.searchByStatusAndTitle(eq(PostStatus.PUBLISHED.name()), eq("skate"), any()))
+        when(jpaRepository.searchByStatus(eq(PostStatus.PUBLISHED.name()), eq("%skate%"), eq(-1), any()))
                 .thenReturn(new PageImpl<>(List.of(postEntity(id, "ep-10", PostStatus.PUBLISHED.name()))));
         when(platformLinkRepository.findByPostIdIn(List.of(id))).thenReturn(List.of());
 
-        List<Post> result = adapter.searchPublished("skate", 0, 10);
+        List<Post> result = adapter.searchPublished(EpisodeSearch.parse("Skate"), 0, 10);
 
         assertThat(result).singleElement().satisfies(p -> assertThat(p.getSlug()).isEqualTo("ep-10"));
     }
@@ -286,13 +287,23 @@ class PostPersistenceAdapterTest {
     void countSearchPublishedUsesASinglePagePageableAndReturnsTotalElementsNotContentSize() {
         Page<PostJpaEntity> page = new PageImpl<>(List.of(postEntity(UUID.randomUUID(), "ep-11", PostStatus.PUBLISHED.name())),
                 PageRequest.of(0, 1), 37);
-        when(jpaRepository.searchByStatusAndTitle(PostStatus.PUBLISHED.name(), "skate", PageRequest.of(0, 1)))
+        when(jpaRepository.searchByStatus(PostStatus.PUBLISHED.name(), "%skate%", -1, PageRequest.of(0, 1)))
                 .thenReturn(page);
 
-        long count = adapter.countSearchPublished("skate");
+        long count = adapter.countSearchPublished(EpisodeSearch.parse("skate"));
 
         assertThat(count).isEqualTo(37L);
-        verify(jpaRepository).searchByStatusAndTitle(PostStatus.PUBLISHED.name(), "skate", PageRequest.of(0, 1));
+        verify(jpaRepository).searchByStatus(PostStatus.PUBLISHED.name(), "%skate%", -1, PageRequest.of(0, 1));
+    }
+
+    @Test
+    void searchPublishedBindsTheEpisodeNumberWhenTheSearchIsOne() {
+        when(jpaRepository.searchByStatus(eq(PostStatus.PUBLISHED.name()), eq("%#42%"), eq(42), any()))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        adapter.searchPublished(EpisodeSearch.parse("#42"), 0, 10);
+
+        verify(jpaRepository).searchByStatus(PostStatus.PUBLISHED.name(), "%#42%", 42, PageRequest.of(0, 10));
     }
 
     // ── findAll / countAll ───────────────────────────────────────────────────
