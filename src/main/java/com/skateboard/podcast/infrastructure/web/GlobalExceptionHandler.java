@@ -2,6 +2,8 @@ package com.skateboard.podcast.infrastructure.web;
 
 import com.skateboard.application.dto.ErrorResponse;
 import com.skateboard.podcast.domain.exception.CategoryNotFoundException;
+import com.skateboard.podcast.domain.exception.DuplicateActiveApplicationException;
+import com.skateboard.podcast.domain.exception.GuestApplicationNotFoundException;
 import com.skateboard.podcast.domain.exception.PostNotFoundException;
 
 import jakarta.validation.ConstraintViolationException;
@@ -9,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -41,6 +44,16 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 
+    @ExceptionHandler(GuestApplicationNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleGuestApplicationNotFound(GuestApplicationNotFoundException ex) {
+        return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage());
+    }
+
+    @ExceptionHandler(DuplicateActiveApplicationException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicateActiveApplication(DuplicateActiveApplicationException ex) {
+        return buildResponse(HttpStatus.CONFLICT, ex.getMessage());
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleBadRequest(IllegalArgumentException ex) {
         return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
@@ -61,6 +74,15 @@ public class GlobalExceptionHandler {
                 .map(fieldError -> fieldError.getField() + " " + fieldError.getDefaultMessage())
                 .orElse("Invalid request");
         return buildResponse(HttpStatus.BAD_REQUEST, message);
+    }
+
+    // Malformed request JSON — a value that can't parse into its target type
+    // (e.g. a non-URI string in CreateGuestApplicationRequest.socialLinks, or
+    // an unknown enum value), not valid-but-missing. Without this it falls
+    // through to the generic 500 handler below.
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleMalformedRequest(HttpMessageNotReadableException ex) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "Malformed request body");
     }
 
     // A failed constraint on a query/path parameter (e.g. search over its

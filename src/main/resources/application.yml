@@ -71,6 +71,13 @@ podcast:
     # PendingPodcastNotificationJob). Frequent enough that a broker blip costs
     # minutes, not a release.
     cron: ${PODCAST_NOTIFICATIONS_CRON:0 */5 * * * *}
+  guest-application-notifications:
+    # Off by default, same posture as podcast.notifications above.
+    enabled: ${GUEST_APPLICATION_NOTIFICATIONS_ENABLED:false}
+    tenant-id: ${APP_TENANCY_DEFAULT_TENANT_ID:00000000-0000-0000-0000-000000000001}
+    # Recovery pass for applications saved but never announced (see
+    # PendingGuestApplicationNotificationJob).
+    cron: ${GUEST_APPLICATION_NOTIFICATIONS_CRON:0 */5 * * * *}
   featured:
     # How many of the most recently published YouTube posts
     # GetFeaturedEpisodeService scans (newest first) for the latest one

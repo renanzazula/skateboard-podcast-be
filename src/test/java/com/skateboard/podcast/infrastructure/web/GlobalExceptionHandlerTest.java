@@ -2,12 +2,15 @@ package com.skateboard.podcast.infrastructure.web;
 
 import com.skateboard.application.dto.ErrorResponse;
 import com.skateboard.podcast.domain.exception.CategoryNotFoundException;
+import com.skateboard.podcast.domain.exception.DuplicateActiveApplicationException;
+import com.skateboard.podcast.domain.exception.GuestApplicationNotFoundException;
 import com.skateboard.podcast.domain.exception.PostNotFoundException;
 import jakarta.validation.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.BindingResult;
@@ -72,6 +75,38 @@ class GlobalExceptionHandlerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getMessage()).isEqualTo("Category not found: interviews");
+    }
+
+    @Test
+    void mapsGuestApplicationNotFoundTo404CarryingTheExceptionMessage() {
+        ResponseEntity<ErrorResponse> response =
+                handler.handleGuestApplicationNotFound(new GuestApplicationNotFoundException("app-123"));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getMessage()).isEqualTo("Guest application not found: app-123");
+    }
+
+    @Test
+    void mapsDuplicateActiveApplicationTo409() {
+        java.util.UUID userId = java.util.UUID.randomUUID();
+
+        ResponseEntity<ErrorResponse> response =
+                handler.handleDuplicateActiveApplication(new DuplicateActiveApplicationException(userId));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getMessage()).contains(userId.toString());
+    }
+
+    @Test
+    void mapsMalformedRequestBodyTo400() {
+        ResponseEntity<ErrorResponse> response =
+                handler.handleMalformedRequest(new HttpMessageNotReadableException("bad json", (org.springframework.http.HttpInputMessage) null));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getMessage()).isEqualTo("Malformed request body");
     }
 
     @Test
