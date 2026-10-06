@@ -20,6 +20,9 @@ public final class EventTopology {
      */
     public static final String PODCAST_PUBLISHED_ROUTING_KEY = "podcast.published.v1";
 
+    /** "Apply to be a podcast guest" (.docs/README_GUEST_APPLICATION_lang.md). */
+    public static final String GUEST_APPLICATION_SUBMITTED_ROUTING_KEY = "podcast.guest-application.submitted.v1";
+
     private EventTopology() {
     }
 }
