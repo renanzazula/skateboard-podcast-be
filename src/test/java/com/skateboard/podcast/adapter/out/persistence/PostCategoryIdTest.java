@@ -39,7 +39,7 @@ class PostCategoryIdTest {
     void isReflexive() {
         PostCategoryId a = new PostCategoryId(UUID.randomUUID(), UUID.randomUUID());
 
-        assertThat(a).isEqualTo(a);
+        assertThat(a).isSameAs(a);
     }
 
     @Test
