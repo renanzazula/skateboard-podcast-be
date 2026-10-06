@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.OffsetDateTime;
 
@@ -92,6 +93,20 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({ConstraintViolationException.class, HandlerMethodValidationException.class})
     public ResponseEntity<ErrorResponse> handleParameterValidation(Exception ex) {
         return buildResponse(HttpStatus.BAD_REQUEST, "Invalid request parameter");
+    }
+
+    // A controller-thrown ResponseStatusException (e.g. "no guest application
+    // for this user" on first read) carries its own status/reason — without
+    // this it falls through to the generic 500 handler below, turning an
+    // expected "not found" into a false alarm.
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ErrorResponse> handleResponseStatus(ResponseStatusException ex) {
+        HttpStatus status = HttpStatus.resolve(ex.getStatusCode().value());
+        if (status == null) {
+            status = HttpStatus.INTERNAL_SERVER_ERROR;
+        }
+        String message = ex.getReason() != null ? ex.getReason() : status.getReasonPhrase();
+        return buildResponse(status, message);
     }
 
     @ExceptionHandler(Exception.class)
